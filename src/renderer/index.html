@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="Ribbit Rally - a frog jetski racing game. 82 pond courses, 8 frogs, power-ups and koi carp!">
+<meta name="theme-color" content="#3b1d8f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Ribbit Rally">
+<link rel="icon" type="image/png" href="/icon.png">
+<link rel="apple-touch-icon" href="/icon.png">
+<title>Ribbit Rally</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Titan+One&family=Fredoka:wght@500;600;700&display=swap">
+<style>
+/* Layout: full-screen canvas race; bubbly game-show menus float over a candy sky. Single committed bright look. */
+:root{
+  --sky:#4fc8ff; --violet:#8f5cff; --pink:#ff5fa2; --bubble:#ff8ad8; --sun:#ffe14d; --mint:#5cf07a;
+  --ink:#3b1d8f; --ink-soft:#6a4fc4; --card:#ffffff; --cream:#fff8ff;
+  --display:'Titan One','Arial Rounded MT Bold','Trebuchet MS',sans-serif;
+  --body:'Fredoka','Trebuchet MS',system-ui,sans-serif;
+  color-scheme:light;
+}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{background:var(--violet);color:var(--ink);font-family:var(--body);font-weight:500;overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:none}
+#gl{position:fixed;inset:0;width:100%;height:100%;display:block;background:linear-gradient(180deg,#5ec8ff,#e4f7ff 62%)}
+#c{position:fixed;inset:0;width:100%;height:100%;display:block;background:transparent}
+.screen{position:fixed;inset:0;overflow-y:auto;overflow-x:hidden;padding-inline:16px;padding-block:calc(20px + env(safe-area-inset-top,0px)) calc(28px + env(safe-area-inset-bottom,0px));
+  background:linear-gradient(165deg,#5fd0ff 0%,#8f7bff 48%,#ff7fd0 100%);touch-action:pan-y}
+.screen::before{content:"";position:fixed;inset:-10%;pointer-events:none;
+  background-image:
+   radial-gradient(circle at 12% 18%,rgba(255,255,255,.35) 0 46px,transparent 47px),
+   radial-gradient(circle at 88% 12%,rgba(255,225,77,.45) 0 34px,transparent 35px),
+   radial-gradient(circle at 78% 78%,rgba(255,255,255,.25) 0 90px,transparent 91px),
+   radial-gradient(circle at 20% 85%,rgba(92,240,122,.35) 0 58px,transparent 59px),
+   radial-gradient(circle at 50% 50%,rgba(255,255,255,.12) 0 160px,transparent 161px);
+  animation:drift 18s ease-in-out infinite alternate}
+.screen::after{content:"";position:fixed;inset:0;pointer-events:none;opacity:.18;
+  background-image:linear-gradient(45deg,#fff 25%,transparent 25%,transparent 75%,#fff 75%),linear-gradient(45deg,#fff 25%,transparent 25%,transparent 75%,#fff 75%);
+  background-size:120px 120px;background-position:0 0,60px 60px;mask-image:linear-gradient(to bottom,transparent 55%,#000);-webkit-mask-image:linear-gradient(to bottom,transparent 55%,#000)}
+@keyframes drift{to{transform:translate(3%,4%) scale(1.05)}}
+.wrap{position:relative;z-index:1;max-width:1100px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+h1,h2,.display{font-family:var(--display);font-weight:400;letter-spacing:.01em;text-wrap:balance;margin:0}
+.logo{font-size:clamp(3.4rem,14vw,8rem);line-height:.88;color:var(--sun);text-align:center;transform:rotate(-4deg);
+  -webkit-text-stroke:3px var(--ink);paint-order:stroke fill;
+  text-shadow:0 6px 0 var(--ink),0 14px 0 rgba(59,29,143,.35);animation:bob 3s ease-in-out infinite}
+.logo span{display:block;color:#fff;transform:rotate(3deg)}
+.logo span em{font-style:normal;color:var(--pink)}
+@keyframes bob{50%{transform:rotate(-2deg) translateY(-6px)}}
+.tag{text-align:center;font-size:1.2rem;font-weight:700;color:#fff;margin:0;text-shadow:0 2px 0 rgba(59,29,143,.5)}
+h2{font-size:clamp(2rem,5.5vw,3rem);color:#fff;-webkit-text-stroke:2px var(--ink);paint-order:stroke fill;text-shadow:0 5px 0 var(--ink)}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.between{justify-content:space-between}
+.center{justify-content:center}
+.btn{font-family:var(--display);font-size:1.4rem;letter-spacing:.02em;border:3px solid var(--ink);cursor:pointer;color:var(--ink);
+  background:linear-gradient(180deg,#fff27a 0%,var(--sun) 55%,#ffc21f 100%);padding:12px 30px;border-radius:999px;
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.7),0 6px 0 var(--ink),0 12px 22px rgba(59,29,143,.35);transition:transform .1s,box-shadow .1s}
+.btn:hover{transform:translateY(-3px) scale(1.03)}
+.btn:active{transform:translateY(4px);box-shadow:inset 0 3px 0 rgba(255,255,255,.7),0 2px 0 var(--ink)}
+.btn.green{background:linear-gradient(180deg,#9dffb0 0%,var(--mint) 55%,#29d158 100%)}
+.btn.pink{background:linear-gradient(180deg,#ffb3dd 0%,var(--pink) 60%,#f0408c 100%);color:#fff;-webkit-text-stroke:1.5px var(--ink);paint-order:stroke fill}
+.btn.ghost{background:#fff;color:var(--ink)}
+.btn.big{font-size:2.1rem;padding:16px 52px}
+.btn:focus-visible,.card:focus-visible,.seg button:focus-visible{outline:4px solid var(--sun);outline-offset:4px}
+.grid{display:grid;gap:16px}
+.frogs{grid-template-columns:repeat(4,minmax(0,1fr))}
+.tracks{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}
+@media (max-width:640px){.frogs,.tracks{grid-template-columns:repeat(2,minmax(0,1fr))}.btn.big{font-size:1.6rem;padding:14px 36px}}
+.card{background:var(--card);border:3px solid var(--ink);border-radius:26px;padding:10px;cursor:pointer;color:var(--ink);font:inherit;text-align:left;
+  display:flex;flex-direction:column;gap:6px;box-shadow:0 6px 0 var(--ink),0 14px 24px rgba(59,29,143,.25);transition:transform .12s;min-width:0}
+.card:hover{transform:translateY(-4px) rotate(-1deg)}
+.card{position:relative}
+.say{position:absolute;left:8px;right:8px;top:auto;bottom:calc(100% - 34px);z-index:5;pointer-events:none;background:#fff;color:var(--ink);border:3px solid var(--ink);border-radius:16px;padding:6px 10px;font-weight:700;font-size:.92rem;line-height:1.2;text-align:center;box-shadow:0 4px 0 var(--ink);animation:sayin .25s cubic-bezier(.3,1.6,.5,1)}
+.say::after{content:"";position:absolute;left:50%;bottom:-11px;width:16px;height:16px;background:#fff;border-right:3px solid var(--ink);border-bottom:3px solid var(--ink);transform:translateX(-50%) rotate(45deg)}
+@keyframes sayin{from{transform:scale(.6);opacity:0}to{transform:none;opacity:1}}
+.card.boing canvas{animation:boing .55s cubic-bezier(.3,1.6,.5,1)}
+@keyframes boing{0%{transform:scale(1)}25%{transform:scale(1.12,.86) rotate(-4deg)}55%{transform:scale(.94,1.1) rotate(3deg)}100%{transform:none}}
+.card.talking canvas{animation:boing .55s cubic-bezier(.3,1.6,.5,1),hop .28s .55s ease-in-out infinite alternate}
+@keyframes hop{from{transform:translateY(0) scale(1.03,.97) rotate(-1.5deg)}to{transform:translateY(-9px) scale(.97,1.04) rotate(1.5deg)}}
+.card.talking .say{font-size:1rem;animation:sayin .25s cubic-bezier(.3,1.6,.5,1),saywig .36s .25s ease-in-out infinite alternate}
+@keyframes saywig{from{transform:rotate(-2deg) scale(1)}to{transform:rotate(2deg) scale(1.05)}}
+.card.dopetalk canvas{animation:boing .55s cubic-bezier(.3,1.6,.5,1),dsway 1.8s .55s ease-in-out infinite}
+@keyframes dsway{0%,100%{transform:rotate(-3.5deg) translateY(2px)}50%{transform:rotate(3.5deg) translateY(4px)}}
+.card.dopetalk .say{animation:sayin .25s cubic-bezier(.3,1.6,.5,1),dsag 1.8s .25s ease-in-out infinite}
+@keyframes dsag{0%,100%{transform:rotate(-1deg)}50%{transform:rotate(1.5deg) translateY(2px)}}
+.card.poshtalk canvas{animation:boing .55s cubic-bezier(.3,1.6,.5,1),posh 1.3s .55s ease-in-out infinite alternate}
+@keyframes posh{from{transform:rotate(0) translateY(0)}to{transform:rotate(-5deg) translateY(-4px) scale(1.02)}}
+.card.poshtalk .say{font-family:Georgia,'Times New Roman',serif;font-style:italic;font-weight:700;border-color:#c9962b;box-shadow:0 4px 0 #c9962b,0 0 0 3px #fff3c4 inset;animation:sayin .25s cubic-bezier(.3,1.6,.5,1)}
+.card.poshtalk .say::after{border-color:#c9962b}
+.card.sel{background:linear-gradient(180deg,#fffbd1,#fff);box-shadow:0 0 0 5px var(--sun),0 6px 0 var(--ink),0 14px 24px rgba(59,29,143,.25)}
+.card canvas{width:100%;height:auto;border-radius:18px;display:block}
+.card .nm{font-family:var(--display);font-size:1.3rem;line-height:1.05}
+.card .sub{font-size:.85rem;font-weight:700;color:var(--ink-soft);display:flex;justify-content:space-between;gap:6px}
+.levels{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:640px){.levels{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.lvl{font:inherit;cursor:pointer;border:3px solid var(--ink);border-radius:24px;background:#fff;color:var(--ink);padding:10px 12px;display:flex;flex-direction:column;align-items:center;gap:2px;box-shadow:0 5px 0 var(--ink);transition:transform .1s}
+.lvl:hover{transform:translateY(-2px)}
+.lvl.on{background:var(--lc);box-shadow:0 0 0 4px #fff,0 5px 0 var(--ink)}
+.lvl .ln{font-family:var(--display);font-size:1.35rem;line-height:1}
+.lvl .lt{font-weight:700;font-size:.9rem;opacity:.85}
+.lvl .lw{font-weight:700;font-size:.8rem;font-variant-numeric:tabular-nums}
+.lvl:focus-visible{outline:4px solid var(--sun);outline-offset:4px}
+@media (max-width:640px){.lvl .ln{font-size:1.05rem}.lvl .lt{font-size:.75rem}}
+.new{display:inline-block;font-size:.75rem;vertical-align:middle;background:var(--pink);color:#fff;padding:2px 8px;border-radius:99px;transform:rotate(-6deg);border:2px solid var(--ink)}
+.num{font-variant-numeric:tabular-nums}
+.stars{color:#ffb800;-webkit-text-stroke:1px var(--ink)}
+.stat{display:grid;grid-template-columns:5.6em 1fr;align-items:center;gap:6px;font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft)}
+.bar{height:10px;border-radius:6px;background:#ece6ff;overflow:hidden;border:2px solid var(--ink)}
+.bar i{display:block;height:100%;background:linear-gradient(180deg,#9dffb0,#29d158);border-radius:4px}
+.quote{font-size:.9rem;font-weight:600;color:var(--ink-soft)}
+.seg{display:inline-flex;background:#ece6ff;border:3px solid var(--ink);border-radius:999px;padding:3px;gap:3px}
+.seg button{font-family:var(--display);font-size:1rem;border:0;background:transparent;color:var(--ink);padding:7px 15px;border-radius:999px;cursor:pointer}
+#oRev{flex-wrap:wrap;border-radius:22px;max-width:100%}
+.seg button.on{background:var(--pink);color:#fff;box-shadow:inset 0 2px 0 rgba(255,255,255,.4)}
+.opt{display:flex;flex-direction:column;gap:4px}
+.opt label{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;font-weight:700;color:var(--ink-soft)}
+.panel{background:rgba(255,255,255,.92);border:3px solid var(--ink);border-radius:28px;padding:16px 18px;box-shadow:0 6px 0 var(--ink)}
+.panel h3{font-family:var(--display);font-weight:400;font-size:1.6rem;margin:0 0 10px;color:var(--violet)}
+.howto{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.howto div{background:#f3eeff;border-radius:18px;padding:12px 14px;font-weight:600;font-size:.98rem}
+.howto b{font-family:var(--display);font-weight:400;font-size:1.15rem;color:var(--pink);display:block}
+.items{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+.items div{display:flex;gap:10px;align-items:center;background:#f3eeff;border-radius:16px;padding:8px;font-size:.88rem;font-weight:600;line-height:1.15}
+.items canvas{width:44px;height:44px;flex:none}
+.items b{display:block;font-family:var(--display);font-weight:400;font-size:1rem;color:var(--ink)}
+#hero{width:min(560px,100%);height:auto;margin:0 auto;display:block;border-radius:22px;border:3px solid var(--ink);box-shadow:0 6px 0 var(--ink)}
+#hudBtns{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:12px;display:flex;gap:8px;z-index:5}
+.round.off{opacity:.55;text-decoration:line-through}
+.round{width:46px;height:46px;border-radius:50%;border:3px solid #fff;background:var(--ink);color:#fff;font-family:var(--display);font-size:1.1rem;cursor:pointer;box-shadow:0 3px 0 rgba(0,0,0,.25)}
+#touch{position:fixed;left:0;right:0;bottom:0;padding:0 14px calc(14px + env(safe-area-inset-bottom,0px));display:flex;justify-content:space-between;align-items:flex-end;pointer-events:none;z-index:4}
+#touch .grp{display:flex;gap:12px;pointer-events:auto}
+.tb{width:80px;height:80px;border-radius:50%;border:4px solid #fff;background:rgba(59,29,143,.55);color:#fff;font-family:var(--display);font-size:1.6rem;touch-action:none;box-shadow:0 5px 0 rgba(59,29,143,.6)}
+.tb.on{background:var(--sun);color:var(--ink)}
+.tb.item{background:linear-gradient(180deg,#ffb3dd,var(--pink));width:94px;height:94px;font-size:1.2rem}
+.tb.small{width:64px;height:64px;font-size:1rem}
+.podium{display:flex;justify-content:center;align-items:flex-end;gap:10px;margin-top:6px}
+.pod{display:flex;flex-direction:column;align-items:center;gap:4px;width:min(30%,170px)}
+.pod canvas{width:100%;height:auto}
+.pod .display{color:#fff;-webkit-text-stroke:1.5px var(--ink);paint-order:stroke fill}
+.pod .blk{width:100%;border-radius:20px 20px 6px 6px;border:3px solid var(--ink);display:flex;align-items:flex-start;justify-content:center;font-family:var(--display);font-size:2.4rem;color:var(--ink);padding-top:6px;box-shadow:inset 0 6px 0 rgba(255,255,255,.5)}
+.standings{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;max-width:540px;width:100%;margin-inline:auto}
+.standings li{display:grid;grid-template-columns:3em 1fr auto;gap:10px;align-items:center;background:#fff;border:3px solid var(--ink);padding:8px 14px;border-radius:18px;font-weight:700;font-variant-numeric:tabular-nums}
+.standings li small{font-weight:600;color:var(--ink-soft)}
+.standings li.me{background:linear-gradient(180deg,#fffbd1,#fff3a0);box-shadow:0 0 0 4px var(--sun)}
+.standings .p{font-family:var(--display);font-size:1.3rem;color:var(--pink)}
+#confetti{position:fixed;inset:0;pointer-events:none;width:100%;height:100%;z-index:2}
+#sPause{background:rgba(143,92,255,.75)}
+@media (prefers-reduced-motion:reduce){.say,.card.talking .say,.card.dopetalk .say,.card.poshtalk .say{animation:none}.card.boing canvas,.card.talking canvas,.card.dopetalk canvas,.card.poshtalk canvas{animation:none}.card:hover,.btn:hover{transform:none}.logo,.screen::before{animation:none}}
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<canvas id="c"></canvas>
+
+<section class="screen" id="sTitle">
+  <div class="wrap">
+    <h1 class="logo">Ribbit<span>Rally<em>!</em></span></h1>
+    <p class="tag">Eight hoppy frogs on jetskis. 82 splashy pond courses across 4 levels. One finish line.</p>
+    <canvas id="hero" width="1120" height="300"></canvas>
+    <div class="row center">
+      <button class="btn big green" id="bPlay">Let's Race!</button>
+      <button class="btn ghost" id="bMusT">Music: On</button>
+    </div>
+    <div class="panel">
+      <h3>How to play</h3>
+      <div class="howto">
+        <div><b>Steer</b>Arrow keys or A / D. On a phone or tablet, use the big ◀ ▶ buttons.</div>
+        <div><b>Go &amp; brake</b>Your jetski drives itself with Auto-Go on. Hold ▼ or S to brake. Turn Auto-Go off to press ▲ or W yourself.</div>
+        <div><b>Grab boxes</b>Drive through the spinning ? boxes to get a surprise item.</div>
+        <div><b>Use items</b>Press Space (or the ITEM button) to use what you picked up.</div>
+        <div><b>Four levels</b>Level 1 is gentle. Level 2 adds sharp turns and a garden sprinkler. Level 3 is hairpin madness with swarms of insects. Hit an insect or get caught in a sprinkler's jet of water and you'll spin out! Sprinklers spray one way at a time, so go round the side the water isn't on.</div>
+        <div><b>Level 4 waves</b>Surf faster riding down a wave and slow down pushing up one. Hit the top of a wave fast and you'll fly through the air!</div>
+        <div><b>Watch out for the carp!</b>Colourful koi swim around the pond. When one pops its head up with its mouth open, steer clear, or it will gulp you down and spit you high into the air!</div>
+        <div><b>Look out above!</b>Birds fly over and drop poo. Watch for the growing shadow and steer away, or you'll skid round and round in the splat!</div>
+        <div><b>Gears &amp; turbo</b>Your jetski has 3 gears that change by themselves as you speed up. Listen for the turbo whistle and the PSSHH of the dump valve on every gear change!</div>
+      </div>
+      <h3 style="margin-top:16px">Items</h3>
+      <div class="items" id="itemList"></div>
+    </div>
+  </div>
+</section>
+
+<section class="screen" id="sFrog" hidden>
+  <div class="wrap">
+    <div class="row between">
+      <h2>Pick your frog</h2>
+      <button class="btn ghost" data-go="sTitle">Back</button>
+    </div>
+    <div class="grid frogs" id="frogGrid"></div>
+    <div class="row center"><button class="btn big green" id="bToTracks">Next: pick a track</button></div>
+  </div>
+</section>
+
+<section class="screen" id="sTrack" hidden>
+  <div class="wrap">
+    <div class="row between">
+      <h2>Pick a track</h2>
+      <button class="btn ghost" data-go="sFrog">Back</button>
+    </div>
+    <div class="panel row" style="gap:18px">
+      <div class="opt"><label>Laps</label><div class="seg" id="oLaps"><button data-v="2">2</button><button data-v="3" class="on">3</button><button data-v="5">5</button></div></div>
+      <div class="opt"><label>Rival frogs</label><div class="seg" id="oDiff"><button data-v="0">Easy</button><button data-v="1" class="on">Normal</button><button data-v="2">Speedy</button></div></div>
+      <div class="opt"><label>Auto-Go</label><div class="seg" id="oGas"><button data-v="1" class="on">On</button><button data-v="0">Off</button></div></div>
+      <div class="opt"><label>Start revs (tap to hear)</label><div class="seg" id="oRev"><button data-v="classic">Classic</button><button data-v="muscle">Muscle</button><button data-v="moto">Motorbike</button><button data-v="jet" class="on">Jet</button><button data-v="toy">Cartoon</button><button data-v="froggy">Froggy</button></div></div>
+      <div class="opt"><label>Music</label><div class="seg" id="oMus"><button data-v="1" class="on">On</button><button data-v="0">Off</button></div></div>
+      <div class="opt"><label>Sound effects</label><div class="seg" id="oSnd"><button data-v="1" class="on">On</button><button data-v="0">Off</button></div></div>
+    </div>
+    <div class="levels" id="levelTabs"></div>
+    <p class="tag" id="levelDesc" style="margin-top:-6px"></p>
+    <div class="grid tracks" id="trackGrid"></div>
+  </div>
+</section>
+
+<section class="screen" id="sPause" hidden style="background:rgba(6,42,43,.85)">
+  <div class="wrap" style="align-items:center;padding-top:12vh">
+    <h2 style="font-size:3rem">Paused</h2>
+    <div class="row center">
+      <button class="btn big green" id="bResume">Keep racing</button>
+    </div>
+    <div class="row center">
+      <button class="btn ghost" id="bRestart">Restart race</button>
+      <button class="btn ghost" id="bQuit">Pick another track</button>
+    </div>
+  </div>
+</section>
+
+<section class="screen" id="sResult" hidden>
+  <canvas id="confetti"></canvas>
+  <div class="wrap" style="align-items:center">
+    <h2 id="rTitle" style="font-size:clamp(2.4rem,8vw,4rem);text-align:center">You won!</h2>
+    <p class="tag" id="rSub"></p>
+    <div class="podium" id="podium" style="width:100%"></div>
+    <ol class="standings" id="standings"></ol>
+    <div class="row center">
+      <button class="btn green" id="bAgain">Race again</button>
+      <button class="btn pink" id="bNext">Next track</button>
+      <button class="btn ghost" id="bMenu">All tracks</button>
+    </div>
+  </div>
+</section>
+
+<div id="hudBtns" hidden><button class="round" id="bMus" aria-label="Music on or off">♪</button><button class="round" id="bPause" aria-label="Pause">II</button></div>
+<div id="touch" hidden>
+  <div class="grp"><button class="tb" id="tL" aria-label="Steer left">◀</button><button class="tb" id="tR" aria-label="Steer right">▶</button></div>
+  <div class="grp" style="align-items:flex-end"><button class="tb small" id="tB" aria-label="Brake">▼</button><button class="tb small" id="tG" aria-label="Go" hidden>▲</button><button class="tb item" id="tI">ITEM</button></div>
+</div>
+<!-- The game's code (src/renderer/game/*.js) is inlined below at build time by electron.vite.config.mjs -->
+<!-- GAME_SCRIPTS -->
+</body>
+</html>

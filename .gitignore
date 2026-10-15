@@ -1,0 +1,15 @@
+# Installed tools and build output (made fresh by "npm install" / "npm run dist")
+node_modules/
+out/
+release/
+package-lock.json
+
+# Test screenshots and Python caches
+tests/output/
+__pycache__/
+*.pyc
+
+# System junk
+.DS_Store
+Thumbs.db
+*.log

@@ -1,0 +1,68 @@
+# Puts the browser version of Ribbit Rally on GitHub Pages, so it can be played on phones and
+# tablets (iPhone, iPad, Android) as well as any computer, with nothing to install.
+# Runs whenever the main branch changes, or by hand from the Actions tab.
+#
+# One-time setup: repository Settings -> Pages -> "Build and deployment" -> Source: "GitHub Actions".
+# Until that's switched on, this workflow just skips the publishing step.
+name: Web version (GitHub Pages)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Is GitHub Pages switched on?
+        id: pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "$(gh api "repos/$GITHUB_REPOSITORY/pages" --jq .build_type 2>/dev/null)" = "workflow" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::GitHub Pages isn't switched on yet. Turn it on in Settings -> Pages -> Source: GitHub Actions, then re-run this workflow."
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.pages.outputs.enabled == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.pages.outputs.enabled == 'true'
+        with:
+          node-version: 22
+
+      - name: Install build tools
+        if: steps.pages.outputs.enabled == 'true'
+        run: npm install --no-audit --no-fund
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+
+      - name: Build the game page
+        if: steps.pages.outputs.enabled == 'true'
+        run: npx electron-vite build
+
+      - uses: actions/upload-pages-artifact@v3
+        if: steps.pages.outputs.enabled == 'true'
+        with:
+          path: out/renderer
+
+      - name: Publish to GitHub Pages
+        id: deployment
+        if: steps.pages.outputs.enabled == 'true'
+        uses: actions/deploy-pages@v4

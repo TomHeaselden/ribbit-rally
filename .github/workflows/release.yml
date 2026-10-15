@@ -1,0 +1,142 @@
+# Builds Ribbit Rally as a desktop app for Windows, macOS and Linux, then publishes a GitHub Release.
+#
+# How to make a new release: create and push a tag that starts with "v", e.g.
+#     git tag v0.0.2 && git push origin v0.0.2
+# You can also run it by hand from the Actions tab ("Run workflow"); that builds everything and
+# keeps the files on the run's page for testing, without publishing a release.
+name: Release desktop apps
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows (x64 + ARM)
+            os: windows-latest
+            target: --win
+          - name: macOS (Apple Silicon + Intel)
+            os: macos-latest
+            target: --mac
+          - name: Linux (x64 + ARM)
+            os: ubuntu-latest
+            target: --linux
+    steps:
+      - name: Get the code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install build tools
+        run: npm install --no-audit --no-fund
+
+      - name: Use the tag as the app version
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version --allow-same-version
+
+      - name: Build the game (electron-vite)
+        run: npx electron-vite build
+
+      - name: Package the app (electron-builder)
+        shell: bash
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: |
+          # macOS disk images occasionally fail with "resource busy" on build machines, so retry once
+          npx electron-builder ${{ matrix.target }} --publish never || {
+            echo "Packaging failed once - retrying..."
+            rm -rf release
+            npx electron-builder ${{ matrix.target }} --publish never
+          }
+
+      - name: List what was built
+        shell: bash
+        run: ls -la release
+
+      - name: Keep the installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: apps-${{ runner.os }}
+          if-no-files-found: error
+          path: |
+            release/*.exe
+            release/*.dmg
+            release/*.zip
+            release/*.AppImage
+            release/*.deb
+
+  web:
+    name: Build web version (phones and tablets)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install build tools
+        run: npm install --no-audit --no-fund
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      - name: Build the game page
+        run: npx electron-vite build
+      - name: Zip the web version
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          [[ "$GITHUB_REF" == refs/tags/v* ]] || VERSION="dev"
+          cd out/renderer && zip -r "$GITHUB_WORKSPACE/Ribbit-Rally-$VERSION-web.zip" .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apps-web
+          path: Ribbit-Rally-*-web.zip
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub Release
+    needs: [build, web]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Collect all the installers
+        uses: actions/download-artifact@v4
+        with:
+          pattern: apps-*
+          path: assets
+          merge-multiple: true
+
+      - name: Create the release and upload the files
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls -la assets
+          TAG="$GITHUB_REF_NAME"
+          VERSION="${TAG#v}"
+          OWNER="${GITHUB_REPOSITORY%%/*}"
+          NAME="${GITHUB_REPOSITORY#*/}"
+          sed "s/{{VERSION}}/$VERSION/g; s/{{OWNER}}/${OWNER,,}/g; s/{{NAME}}/$NAME/g" .github/release-notes.md > notes.md
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --title "Ribbit Rally $TAG" --notes-file notes.md
+          else
+            gh release create "$TAG" --title "Ribbit Rally $TAG" --notes-file notes.md --verify-tag
+          fi
+          gh release upload "$TAG" assets/* --clobber
