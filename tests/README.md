@@ -21,5 +21,7 @@ Useful ones:
 | `t82.py` | rubbing against rivals doesn't slow you down |
 | `t84.py` | the music keeps playing while switching level tabs |
 | `t92.py` | frog voice lines (uses a stand-in speech voice) |
+| `t102.py` | draws each frog's hover dance as a sheet of frames (`dance-poses.png`) |
+| `t103.py` | frogs dance on hover and stop when they talk |
 
 The rest are one-off checks from earlier development, kept for reference. The Swiftshader browser flags some of them use (`--use-angle=swiftshader`) let WebGL run on machines without a graphics card.

@@ -397,7 +397,8 @@ function textToVisemes(text){const out=[];const words=[];const re=/[A-Za-z']+|[.
       if(out.length&&out[out.length-1][0]===v&&v==='MBP'){out[out.length-1][1]+=.4}else out.push([v,len]);k+=n;}
     out.push(['gap',.35]);}
   return {segs:out,words};}
-const SPK={i:-1,t:0};   // which frog is talking right now (they bounce and go wide-eyed while they speak)
+const SPK={i:-1,t:0};
+const DANCE={i:-1,t0:0};const REDUCE_MOTION=window.matchMedia?matchMedia('(prefers-reduced-motion: reduce)'):{matches:false};   // which frog is dancing on the frog picker (the one under the mouse)   // which frog is talking right now (they bounce and go wide-eyed while they speak)
 const MOUTH={i:-1,cur:Object.assign({},VIS.rest),tl:null,start:0,raf:0,last:0,unit:.08,active:false};
 function mouthSay(text,rate,unit=.078){const v=textToVisemes(text);let t=0;const segs=v.segs.map(([k,l])=>{const d=l*unit/rate;const s={k,t,d};t+=d;return s});
   MOUTH.tl={segs,words:v.words.map(w=>({char:w.char,t:segs[w.at]?segs[w.at].t:t})),end:t};MOUTH.start=performance.now();MOUTH.active=true;mouthRun();}
@@ -420,7 +421,9 @@ function faceUpdate(now,dt){const speaking=MOUTH.raf&&MOUTH.i>=0;const ptr=now-P
     const a=1-Math.exp(-dt*18);F.look[0]+=(F.lookT[0]-F.look[0])*a;F.look[1]+=(F.lookT[1]-F.look[1])*a;
     if(now>F.nextBlink){F.blinkStart=now;const fs=FUNNY_BLINK[i];F.style=fs&&Math.random()<.55?fs:'normal';F.nextBlink=now+(BLINK_LEN[F.style]||.2)*1000+2200+Math.random()*4200+(F.style==='normal'&&Math.random()<.2?-1800:0);}
     blinkShape(F,(now-(F.blinkStart||-1e9))/1000);
-    {const cd=frogGrid.children[i];if(cd&&cd.matches(':hover')){F.smileT=1;F.nextSmile=Math.max(F.nextSmile,now+700);}}
+    {const cd=frogGrid.children[i];const hov=cd&&cd.matches(':hover');if(hov){F.smileT=1;F.nextSmile=Math.max(F.nextSmile,now+700);}
+     // hovering starts this frog's dance (not while it's talking)
+     const canDance=hov&&SPK.i!==i&&!(MOUTH.raf&&MOUTH.i===i)&&!REDUCE_MOTION.matches;if(canDance&&DANCE.i!==i){DANCE.i=i;DANCE.t0=now;}else if(!canDance&&DANCE.i===i)DANCE.i=-1;}
     if(now>F.nextSmile){F.smileT=F.smileT>.6?.4:1;F.nextSmile=now+(F.smileT>.6?1200+Math.random()*1500:2500+Math.random()*5000);}
     F.smile+=(F.smileT-F.smile)*(1-Math.exp(-dt*7));});}
 // funny signature blinks: Zippy winks, Lulu flutters her lashes, Bonk nods off, Pip blinks out of sync, Douglas Moleseed's eyes boing, Fern scrunches
@@ -468,6 +471,7 @@ function drawSmile(c,i,k){const M=THUMB_MOUTH[i];if(!M)return;const sm=FACE[i].s
   else{c.strokeStyle=lipC;c.lineWidth=line;c.beginPath();c.moveTo(L[0],L[1]);c.quadraticCurveTo(mx+ux*dip*1.6,my+uy*dip*1.6,Rt[0],Rt[1]);c.stroke();}
   if(sm>.3){c.strokeStyle=lipC;c.lineWidth=line*.6;for(const [P,sg] of [[L,-1],[Rt,1]]){c.beginPath();c.moveTo(P[0]+sx*sg*line*.2,P[1]+sy*sg*line*.2);c.lineTo(P[0]+sx*sg*line*1.4-ux*line*1.2,P[1]+sy*sg*line*1.4-uy*line*1.2);c.stroke();}}}
 function drawCard(i,s){const card=frogGrid.children[i];if(!card)return;const cv=card.querySelector('canvas');if(!cv||!THUMBS[i])return;const c=cv.getContext('2d'),W=cv.width,k=W/256;
+  if(DANCE.i===i&&!s){const img=danceFrame(i,(performance.now()-DANCE.t0)/1000,card.dataset.dance);if(img){c.clearRect(0,0,W,W);c.drawImage(img,0,0,W,W);return;}}
   c.clearRect(0,0,W,W);c.drawImage(THUMBS_FACE[i]||THUMBS[i],0,0,W,W);if(THUMBS_FACE[i])drawEyes(c,i,k);
   const busy=s?s.open+s.press+s.round+Math.abs(s.width-1)+s.teeth+s.tongue:0;if(!s||busy<.05){if(THUMBS_FACE[i])drawSmile(c,i,k);return;}
   const M=THUMB_MOUTH[i];if(!M)return;
@@ -495,7 +499,7 @@ function mouthRun(){if(MOUTH.raf)return;MOUTH.last=performance.now();const step=
     if(MOUTH.i>=0)drawMouth(MOUTH.i,cur);const tl=MOUTH.tl;const playing=tl&&(now-MOUTH.start)/1000<=tl.end;
     if(playing||moving>.01){MOUTH.raf=requestAnimationFrame(step)}else{MOUTH.raf=0;MOUTH.tl=null;if(MOUTH.i>=0)drawMouth(MOUTH.i,null);}};MOUTH.raf=requestAnimationFrame(step);}
 let faceRaf=0,faceLast=0;
-function faceLoop(){if(faceRaf)return;faceLast=performance.now();const step=now=>{if($('#sFrog').hidden){faceRaf=0;return}const dt=Math.min(.05,(now-faceLast)/1000);faceLast=now;faceUpdate(now,dt);
+function faceLoop(){if(faceRaf)return;faceLast=performance.now();const step=now=>{if($('#sFrog').hidden){faceRaf=0;DANCE.i=-1;return}const dt=Math.min(.05,(now-faceLast)/1000);faceLast=now;faceUpdate(now,dt);
     for(let i=0;i<FROGS.length;i++)drawCard(i,(MOUTH.raf&&MOUTH.i===i)?MOUTH.cur:null);faceRaf=requestAnimationFrame(step)};faceRaf=requestAnimationFrame(step);}
 function mouthReset(i){if(MOUTH.i>=0&&MOUTH.i!==i)drawMouth(MOUTH.i,null);MOUTH.i=i;MOUTH.tl=null;MOUTH.cur=Object.assign({},VIS.rest);}
 function mouthPulse(){}
