@@ -534,11 +534,11 @@ const DANCE_POSES={
   twirl:t=>{const p=(t%1.5)/1.5,e=p<.7?(1-Math.cos(p/.7*Math.PI))/2:1;return {tw:e*TAU,by:Math.sin(Math.min(1,p/.7)*Math.PI)*4.5,aL:[1.1,1.25],aR:[1.1,1.25]}}, // Lulu: ballerina twirl, arms out
   wobble:t=>{const w=Math.sin(t*TAU*1.7);return {sy:1+.13*w,sx:1-.09*w,by:-1.5*w,rl:.09*Math.sin(t*TAU*.85),aL:[.6+.8*Math.max(0,w),.6],aR:[.6+.8*Math.max(0,-w),.6]}}, // Bonk: belly jiggle
   hop:t=>{const p=(t*1.7)%1,h=Math.sin(p*Math.PI),land=p<.12||p>.88;return {by:h*3,sy:land?.88:1.05,sx:land?1.08:.98,pt:-.12*h,aL:[.3+1.9*h,.5*h],aR:[.3+1.9*h,.5*h]}}, // Pip: bouncy hops, arms up
-  dab:(t,rig)=>{const p=t%2.6,s=p<1.3?1:-1,q=p%1.3,ez=x=>1-Math.pow(1-x,3),k=q<.2?ez(q/.2):q>1.12?1-ez((q-1.12)/.18):1,hit=q>.2&&q<.45?Math.sin((q-.2)/.25*Math.PI):0; // Mango: dabs one way, then the other
-    const D=v3n(s>0?[-.45,.6,.66]:[.4,.52,-.8]),St=[2,25,8*s],Sb=[3,24,-7*s],Eb=[17,26,-4*s],str=rig[s>0?'R':'L'],bnt=rig[s>0?'L':'R'];
-    const A=(r,P)=>({S:v3mix(r.S,P.S,k),E:v3mix(r.E,P.E,k),H:v3mix(r.H,P.H,k)});
-    const arms={[s>0?'aR':'aL']:A(str,{S:St,E:v3(St,D,9.75),H:v3(St,D,19.5)}),[s>0?'aL':'aR']:A(bnt,{S:Sb,E:Eb,H:v3(Eb,D,11)})};
-    return Object.assign({pt:-.12*k,rl:-.1*s*k,tw:-.12*s*k,by:1.6*hit+.6*Math.sin(t*TAU*2)*(1-k),sy:1-.05*hit,sx:1+.04*hit},arms)},
+  dab:(t,rig)=>{const p=t%3,s=p<1.5?1:-1,q=p%1.5,ez=x=>1-Math.pow(1-x,3),pop=x=>1+3.4*Math.pow(x-1,3)+2.4*Math.pow(x-1,2), // Mango: DAB! one way, then the other
+    k=q<.16?pop(q/.16):q>1.3?1-ez((q-1.3)/.2):1,hit=q>.16&&q<.46?Math.sin((q-.16)/.3*Math.PI):0;
+    const D=v3n(s>0?[-.45,.6,.66]:[.4,.52,-.8]),St=[2,25,8*s],Sb=[3,24,-7*s],Eb=[17,26,-4*s],str=rig[s>0?'R':'L'],bnt=rig[s>0?'L':'R'];  // aimed so both dabs point diagonally up across the picture
+    const A=(r,P)=>({S:v3mix(r.S,P.S,k),E:v3mix(r.E,P.E,k),H:v3mix(r.H,P.H,k)}),aS=A(str,{S:St,E:v3(St,D,11),H:v3(St,D,22)}),aB=A(bnt,{S:Sb,E:Eb,H:v3(Eb,D,12)});
+    return {[s>0?'aR':'aL']:aS,[s>0?'aL':'aR']:aB,pt:-.26*k,rl:-.2*s*k,tw:-.2*s*k,by:2.4*hit+.6*Math.sin(t*TAU*2)*(1-Math.min(1,k)),sy:1-.07*hit,sx:1+.05*hit,fx:{p:aS.H,k,q,s}}},
   robot:t=>{const st=Math.floor(t*4)%4;return {tw:[0,-.45,0,.45][st],by:st%2?2.5:0,aL:[st<2?1.57:.35,.15],aR:[st<2?.35:1.57,.15]}},          // Douglas: stiff, jerky robot moves
   sway:t=>{const w=Math.sin(t*TAU);return {rl:.24*w,bz:w*3,tw:.12*Math.sin(t*TAU*2),aL:[2.3,.35+.45*w],aR:[2.3,.35-.45*w]}},                   // Fern: hula sway, arms waving overhead
   moonwalk:t=>{const p=(t*.75)%1,g=p<.8?p/.8:1-(p-.8)/.2;return {bx:5-12*g,pt:.14,by:Math.abs(Math.sin(t*TAU*1.5))*1.5,aL:[.6+.5*Math.sin(t*TAU*1.5),.2],aR:[.6-.5*Math.sin(t*TAU*1.5),.2]}} // Rocket: smooth backwards glide
@@ -558,5 +558,8 @@ function danceFrame(i,t,style){if(!GL3.ok)return null;const gl=GL3.gl,cvs=GL3.cv
   // an arm pose is either [raise, spread] (the whole arm swings from the shoulder) or {S,E,H} points for shoulder, elbow and hand (the arm bends)
   for(const [sd,A,P] of [[-1,M.L,po.aL],[1,M.R,po.aR]]){const r=A.rest,mu=Array.isArray(P)?arm(sd,P):m4mul(Mb,segM(r.S,r.E,P.S,P.E)),mf=Array.isArray(P)?mu:m4mul(Mb,segM(r.E,r.H,P.E,P.H));
     drawMesh(A.up,mu,[1,1,1],{gl:1.1});drawMesh(A.fo,mf,[1,1,1],{gl:1.1});}
-  const o=DANCE_CV[i]||(DANCE_CV[i]=Object.assign(document.createElement('canvas'),{width:S,height:S}));const c=o.getContext('2d');
+  const o=DANCE_CV[i]||(DANCE_CV[i]=Object.assign(document.createElement('canvas'),{width:S,height:S}));
+  // where the dabbing hand lands in the picture, for the DAB! burst drawn on the card
+  o.fx=null;if(po.fx){const h=po.fx.p,w=[0,1,2,3].map(r=>Mb[r]*h[0]+Mb[4+r]*h[1]+Mb[8+r]*h[2]+Mb[12+r]),X=vp[0]*w[0]+vp[4]*w[1]+vp[8]*w[2]+vp[12],Y=vp[1]*w[0]+vp[5]*w[1]+vp[9]*w[2]+vp[13],Wc=vp[3]*w[0]+vp[7]*w[1]+vp[11]*w[2]+vp[15];
+    o.fx={x:(X/Wc*.5+.5)*S,y:(1-(Y/Wc*.5+.5))*S,k:po.fx.k,q:po.fx.q,s:po.fx.s};}const c=o.getContext('2d');
   c.clearRect(0,0,S,S);c.drawImage(cvs,0,cvs.height-S,S,S,0,0,S,S);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);return o}

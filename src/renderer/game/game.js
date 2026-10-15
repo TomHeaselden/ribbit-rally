@@ -470,8 +470,15 @@ function drawSmile(c,i,k){const M=THUMB_MOUTH[i];if(!M)return;const sm=FACE[i].s
     c.strokeStyle=lipC;c.lineWidth=line;shape();c.stroke();}
   else{c.strokeStyle=lipC;c.lineWidth=line;c.beginPath();c.moveTo(L[0],L[1]);c.quadraticCurveTo(mx+ux*dip*1.6,my+uy*dip*1.6,Rt[0],Rt[1]);c.stroke();}
   if(sm>.3){c.strokeStyle=lipC;c.lineWidth=line*.6;for(const [P,sg] of [[L,-1],[Rt,1]]){c.beginPath();c.moveTo(P[0]+sx*sg*line*.2,P[1]+sy*sg*line*.2);c.lineTo(P[0]+sx*sg*line*1.4-ux*line*1.2,P[1]+sy*sg*line*1.4-uy*line*1.2);c.stroke();}}}
+// Mango's dab: a burst of lines round his hand and a big "DAB!" that pops up each time he hits the pose
+function drawDabFx(c,fx,k){if(fx.k<.5)return;const x=fx.x*k,y=fx.y*k,q=fx.q,g=Math.min(1,q/.5),W=c.canvas.width;c.save();c.lineCap='round';
+  for(let j=0;j<10;j++){const an=j/10*TAU+.25,r0=(9+12*g)*k,r1=(17+(j%2?12:20)*g)*k;c.globalAlpha=Math.max(0,1-g*.75);c.strokeStyle=j%2?'#ffffff':'#ffd23f';c.lineWidth=(j%2?2.5:4)*k;
+    c.beginPath();c.moveTo(x+Math.cos(an)*r0,y+Math.sin(an)*r0);c.lineTo(x+Math.cos(an)*r1,y+Math.sin(an)*r1);c.stroke();}
+  const sc=q<.12?q/.12*1.4:q<.3?1.4-(q-.12)/.18*.4:1+.04*Math.sin(q*TAU*2),fs=30*k,tx=Math.max(56*k,Math.min(W-56*k,x+fx.s*8*k)),ty=Math.max(26*k,y-34*k);
+  c.globalAlpha=q>1.3?Math.max(0,1-(q-1.3)/.15):1;c.translate(tx,ty);c.rotate(-.18*fx.s);c.scale(sc,sc);c.font=`${fs}px 'Titan One',system-ui,sans-serif`;c.textAlign='center';c.textBaseline='middle';
+  c.lineJoin='round';c.lineWidth=7*k;c.strokeStyle='#3b1d5a';c.strokeText('DAB!',0,0);c.fillStyle='#ffd23f';c.fillText('DAB!',0,0);c.restore();}
 function drawCard(i,s){const card=frogGrid.children[i];if(!card)return;const cv=card.querySelector('canvas');if(!cv||!THUMBS[i])return;const c=cv.getContext('2d'),W=cv.width,k=W/256;
-  if(DANCE.i===i&&!s){const img=danceFrame(i,(performance.now()-DANCE.t0)/1000,card.dataset.dance);if(img){c.clearRect(0,0,W,W);c.drawImage(img,0,0,W,W);return;}}
+  if(DANCE.i===i&&!s){const img=danceFrame(i,(performance.now()-DANCE.t0)/1000,card.dataset.dance);if(img){c.clearRect(0,0,W,W);c.drawImage(img,0,0,W,W);if(img.fx)drawDabFx(c,img.fx,k);return;}}
   c.clearRect(0,0,W,W);c.drawImage(THUMBS_FACE[i]||THUMBS[i],0,0,W,W);if(THUMBS_FACE[i])drawEyes(c,i,k);
   const busy=s?s.open+s.press+s.round+Math.abs(s.width-1)+s.teeth+s.tongue:0;if(!s||busy<.05){if(THUMBS_FACE[i])drawSmile(c,i,k);return;}
   const M=THUMB_MOUTH[i];if(!M)return;
