@@ -12,7 +12,7 @@ async def main():
         await pg.evaluate("speechSynthesis.speak=()=>{}")
         card=pg.locator('#frogGrid > :nth-child(2)'); await card.hover(); await pg.wait_for_timeout(400)
         print('hover: DANCE.i=',await pg.evaluate("DANCE.i"))
-        await card.click(); await pg.wait_for_timeout(500)
+        await card.click(); await pg.wait_for_timeout(1500)
         print('talking: SPK.i=',await pg.evaluate("SPK.i"),'DANCE.i=',await pg.evaluate("DANCE.i"))
         await pg.mouse.move(5,5); await pg.wait_for_timeout(300)
         print('left: DANCE.i=',await pg.evaluate("DANCE.i"))
