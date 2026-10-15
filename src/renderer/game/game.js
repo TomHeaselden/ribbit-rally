@@ -513,7 +513,7 @@ function pickPoshVoice(){try{const vs=speechSynthesis.getVoices();if(!vs.length)
   return au.find(v=>fem.test(v.name)&&/natural|online|neural|premium|enhanced/i.test(v.name))||au.find(v=>fem.test(v.name))||au.find(v=>!mal.test(v.name))||
     vs.find(v=>/en[-_]GB/i.test(v.lang)&&/female|serena|kate|stephanie|martha|hazel|susan|libby|sonia|maisie|fiona/i.test(v.name))||au[0]||null}catch(e){return null}}
 try{if(window.speechSynthesis)setTimeout(()=>{PV=pickPoshVoice()},500)}catch(e){}
-const DOPEY_VOICE={pitch:.06,rate:1,f0:50,fm:[[300,2.5,1.8],[700,3,1]]};
+const DOPEY_VOICE={pitch:.06,rate:.9,f0:50,fm:[[300,2.5,1.8],[700,3,1]]};
 function bonkCroak(t){croak(t,[{at:0,dur:.16,f0:[115,100],rate:[22,20],sharp:3},{at:.22,dur:.3,f0:[105,88],rate:[20,16],sharp:3}],[[330,2.5,1.6],[780,3,1]],2.3);}
 // lines get excited: full stops become exclamation marks (but "..." pauses stay)
 function exciteText(s){return s.replace(/([^.])\.(\s|$)/g,'$1!$2')}
