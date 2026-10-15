@@ -129,6 +129,7 @@ function kartGeo(f,face,parts){const PT=parts?{ski:new Geo(),body:new Geo()}:nul
   }
   for(const z of [-7,7]){SPH(g,4,37,z,6.5,6.5,6.5,f.skin,[0,0,0],12,8);SPH(g,7.5,37.5,z,4.8,4.8,4.8,'#ffffff',[0,0,0],12,8);if(!face){SPH(g,11.2,37.8,z,2.4,2.6,2.4,'#1d1433',[0,0,0],10,6);SPH(g,12.4,39,z+(z>0?-.8:.8),.9,.9,.9,'#ffffff',[0,0,0],6,4);}if(!f.fat)SPH(g,8.5,28,z*1.1,2,1.6,2,'#ff8fbf',[0,0,0],8,5);}
   if(!face&&!PT)BOX(g,10.4,28.5,0,1.2,1.2,8,'#3b1d5a');
+  if(PT)for(const [sd,z] of [['bumL',-1],['bumR',1]]){const b=PT[sd]=new Geo();SPH(b,-13.5,16.5,z*4.6,5.6,6.2,5.4,shade(f.skin,-.04),[0,0,0],14,10);} // a round little bottom, only shown for Lulu's twerk
   if(PT)for(let q=0;q<=24;q++){const u=q/12-1;SPH(g,10.75-.6*u*u,26.4+2.6*u*u,u*5.6,.8,.8,.8,'#3b1d5a',[0,0,0],8,6);}   // big happy smile
   const a=f.accC;
   switch(f.acc){
@@ -145,7 +146,8 @@ function kartGeo(f,face,parts){const PT=parts?{ski:new Geo(),body:new Geo()}:nul
       for(const [x,z] of [[8.4,-8.4],[6.4,-11.2],[7.6,-9.8]])CYL(g,x,11,z,.55,.55,2.6,'#ffffff',[0,0,0],5);}
       break;
     case 'horns':gSphere(g,mkXf([-4,36,0],[12,7,12]),'#8a5a30',14,6,.5);CYL(g,-5,44,10,0,3.2,14,a,[.7,0,0]);CYL(g,-5,44,-10,0,3.2,14,a,[-.7,0,0]);break;
-    case 'propeller':gSphere(g,mkXf([-4,37,0],[11,8,11]),'#2fa3ff',14,6,.5);CYL(g,-4,46,0,1,1,6,a);BOX(g,-4,49,0,28,1.2,3.5,'#ffd23f');BOX(g,-4,49,0,3.5,1.2,28,'#ffd23f');break;
+    case 'propeller':{const h=PT?(PT.hat=new Geo()):g;gSphere(h,mkXf([-4,37,0],[11,8,11]),'#2fa3ff',14,6,.5);CYL(h,-4,46,0,1,1,6,a);BOX(h,-4,49,0,28,1.2,3.5,'#ffd23f');BOX(h,-4,49,0,3.5,1.2,28,'#ffd23f');
+      if(PT)for(const z of [-1,1])SPH(h,-4,37.4,z*10.6,1.6,1.6,1.6,'#ffd23f',[0,0,0],8,6);break;}   // two yellow buttons on the cap so you can see it turn
     case 'shades':BOX(g,12,38,0,2.5,5,24,a);BOX(g,6,39,12,10,1.5,1.5,a);BOX(g,6,39,-12,10,1.5,1.5,a);
       // cool backwards snapback cap
       gSphere(g,mkXf([-4,38.5,0],[12,8.5,12]),'#1d1a22',16,7,.5);CYL(g,-4,38.6,0,12.1,12.1,1.6,'#ffd23f',[0,0,0],16);SPH(g,-4,47,0,2,1.4,2,'#ffd23f');
@@ -531,9 +533,15 @@ const DANCE_MESH={},DANCE_CV={};
 // each dance returns the body's offset (bx,by,bz), twist/roll/pitch, squash and each arm's [raise, spread]
 const DANCE_POSES={
   shake:t=>{const w=Math.sin(t*TAU*2.4);return {tw:w*.5,by:Math.abs(w)*3,bz:w*2,rl:w*.1,aL:[1.4+.9*w,.45],aR:[1.4-.9*w,.45]}},                       // Zippy: hip shimmy, arms pumping
-  twirl:t=>{const p=(t%1.5)/1.5,e=p<.7?(1-Math.cos(p/.7*Math.PI))/2:1;return {tw:e*TAU,by:Math.sin(Math.min(1,p/.7)*Math.PI)*4.5,aL:[1.1,1.25],aR:[1.1,1.25]}}, // Lulu: ballerina twirl, arms out
-  wobble:t=>{const w=Math.sin(t*TAU*1.7);return {sy:1+.13*w,sx:1-.09*w,by:-1.5*w,rl:.09*Math.sin(t*TAU*.85),aL:[.6+.8*Math.max(0,w),.6],aR:[.6+.8*Math.max(0,-w),.6]}}, // Bonk: belly jiggle
-  hop:t=>{const p=(t*1.7)%1,h=Math.sin(p*Math.PI),land=p<.12||p>.88;return {by:h*3,sy:land?.88:1.05,sx:land?1.08:.98,pt:-.12*h,aL:[.3+1.9*h,.5*h],aR:[.3+1.9*h,.5*h]}}, // Pip: bouncy hops, arms up
+  twerk:(t,rig)=>{const p=t%3.6,ez=x=>(1-Math.cos(Math.min(1,Math.max(0,x))*Math.PI))/2,k=p<.4?ez(p/.4):p<3?1:1-ez((p-3)/.4); // Lulu: turns round, bends over and shakes her bottom
+    const on=Math.min(1,Math.max(0,(p-.3)/.2))*(p<2.95?1:0),b=Math.pow(Math.abs(Math.sin(t*Math.PI*4.6)),.5)*on,w=Math.sin(t*Math.PI*4.6)*on,back=p>3.3?Math.sin((p-3.3)/.3*Math.PI):0;
+    const hands=r=>{const z=Math.sign(r.S[2]);return {S:r.S,E:v3mix(r.E,[4,18,z*15],k),H:v3mix(r.H,[8,12,z*12],k)}};
+    return {tw:2.45*k,pt:-.42*k-.22*b,rl:.16*w,by:4*k+2.5*b+5*back,sy:1-.05*b,sx:1+.04*b,bum:k,jig:w,aL:hands(rig.L),aR:hands(rig.R)}},
+  tummy:(t,rig)=>{const k=Math.min(1,t/.35),a=t*TAU*1.1; // Bonk: rubs his big tummy round and round with both hands
+    const hand=(r,sd)=>{const ang=sd*a,y=20.5+4*Math.sin(ang),z=sd*(4.8+3.6*Math.cos(ang)),q=1-((y-19)/10)**2-(z/12.5)**2,x=4.5+10.5*Math.sqrt(Math.max(0,q))+2.4;
+      return {S:r.S,E:v3mix(r.E,[8.5,20.5+.8*Math.sin(ang),sd*15],k),H:v3mix(r.H,[x,y,z],k)}};
+    return {aL:hand(rig.L,-1),aR:hand(rig.R,1),rl:.07*Math.sin(t*TAU*.45)*k,tw:(.12+.06*Math.sin(t*TAU*.3))*k,pt:(.2+.03*Math.sin(t*TAU*.45))*k,sy:1+.03*Math.sin(a*2)*k,sx:1-.02*Math.sin(a*2)*k,by:(2.2+.5*Math.sin(a*2))*k}},  // leans back and sits up so his tummy shows over the handlebars
+  hop:t=>{const p=(t*1.7)%1,h=Math.sin(p*Math.PI),land=p<.12||p>.88;return {hat:t*TAU*1.6+h*1.2,by:h*3,sy:land?.88:1.05,sx:land?1.08:.98,pt:-.12*h,aL:[.3+1.9*h,.5*h],aR:[.3+1.9*h,.5*h]}}, // Pip: bouncy hops, arms up
   dab:(t,rig)=>{const p=t%3,s=p<1.5?1:-1,q=p%1.5,ez=x=>1-Math.pow(1-x,3),pop=x=>1+3.4*Math.pow(x-1,3)+2.4*Math.pow(x-1,2), // Mango: DAB! one way, then the other
     k=q<.16?pop(q/.16):q>1.3?1-ez((q-1.3)/.2):1,hit=q>.16&&q<.46?Math.sin((q-.16)/.3*Math.PI):0;
     const D=v3n(s>0?[-.45,.6,.66]:[.4,.52,-.8]),St=[2,25,8*s],Sb=[3,24,-7*s],Eb=[17,26,-4*s],str=rig[s>0?'R':'L'],bnt=rig[s>0?'L':'R'];  // aimed so both dabs point diagonally up across the picture
@@ -544,7 +552,7 @@ const DANCE_POSES={
   moonwalk:t=>{const p=(t*.75)%1,g=p<.8?p/.8:1-(p-.8)/.2;return {bx:5-12*g,pt:.14,by:Math.abs(Math.sin(t*TAU*1.5))*1.5,aL:[.6+.5*Math.sin(t*TAU*1.5),.2],aR:[.6-.5*Math.sin(t*TAU*1.5),.2]}} // Rocket: smooth backwards glide
 };
 function danceFrame(i,t,style){if(!GL3.ok)return null;const gl=GL3.gl,cvs=GL3.cvs,U=GL3.U,S=256,f=FROGS[i];
-  const M=DANCE_MESH[i]||(DANCE_MESH[i]=(()=>{const P=kartGeo(f,false,true),A=s=>({up:upload(P[s].up),fo:upload(P[s].fo),rest:P[s].rest});return {ski:upload(P.ski),body:upload(P.body),L:A('L'),R:A('R')}})());
+  const M=DANCE_MESH[i]||(DANCE_MESH[i]=(()=>{const P=kartGeo(f,false,true),A=s=>({up:upload(P[s].up),fo:upload(P[s].fo),rest:P[s].rest});return {ski:upload(P.ski),body:upload(P.body),hat:P.hat?upload(P.hat):null,bumL:upload(P.bumL),bumR:upload(P.bumR),L:A('L'),R:A('R')}})());
   const po=Object.assign({bx:0,by:0,bz:0,tw:0,rl:0,pt:0,sx:1,sy:1,aL:[0,0],aR:[0,0]},(DANCE_POSES[style]||DANCE_POSES.shake)(t,{L:M.L.rest,R:M.R.rest}));
   if(cvs.width<S||cvs.height<S){cvs.width=Math.max(cvs.width,S);cvs.height=Math.max(cvs.height,S);}
   gl.viewport(0,0,S,S);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
@@ -554,7 +562,8 @@ function danceFrame(i,t,style){if(!GL3.ok)return null;const gl=GL3.gl,cvs=GL3.cv
   const sh=f.fat?[1.6,24.4,11.2]:[0,25,9];
   const arm=(sd,[raise,spread])=>m4chain(Mb,m4T(sh[0],sh[1],sd*sh[2]),m4Rx(sd*spread),m4Rz(raise),m4T(-sh[0],-sh[1],-sd*sh[2]));
   drawMesh(M.ski,m4T(0,Math.sin(t*TAU*1.2)*.6,0),[1,1,1],{gl:1.1});
-  drawMesh(M.body,Mb,[1,1,1],{gl:1.1});
+  drawMesh(M.body,Mb,[1,1,1],{gl:1.1});if(po.bum)for(const [sd,m] of [[-1,M.bumL],[1,M.bumR]]){const c=[-13.5,16.5,sd*4.6],j=po.bum*(1+(po.jig||0)*sd*.12);drawMesh(m,m4chain(Mb,m4T(c[0],c[1]+(po.jig||0)*sd*1.4,c[2]),m4S(j,j,j),m4T(-c[0],-c[1],-c[2])),[1,1,1],{gl:1.1});}
+  if(M.hat)drawMesh(M.hat,m4chain(Mb,m4T(-4,0,0),m4Ry(po.hat||0),m4T(4,0,0)),[1,1,1],{gl:1.1});
   // an arm pose is either [raise, spread] (the whole arm swings from the shoulder) or {S,E,H} points for shoulder, elbow and hand (the arm bends)
   for(const [sd,A,P] of [[-1,M.L,po.aL],[1,M.R,po.aR]]){const r=A.rest,mu=Array.isArray(P)?arm(sd,P):m4mul(Mb,segM(r.S,r.E,P.S,P.E)),mf=Array.isArray(P)?mu:m4mul(Mb,segM(r.E,r.H,P.E,P.H));
     drawMesh(A.up,mu,[1,1,1],{gl:1.1});drawMesh(A.fo,mf,[1,1,1],{gl:1.1});}

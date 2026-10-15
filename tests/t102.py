@@ -11,7 +11,7 @@ async def main():
         pg=await b.new_page(viewport={'width':1100,'height':900});errs=[];pg.on('pageerror',lambda e:errs.append(str(e)))
         await pg.goto(PAGE); await pg.wait_for_timeout(500)
         await pg.click('#bPlay'); await pg.wait_for_timeout(2000)
-        st=['shake','twirl','wobble','hop','dab','robot','sway','moonwalk']
+        st=['shake','twerk','tummy','hop','dab','robot','sway','moonwalk']
         sheet=Image.new('RGB',(256*6,256*8),(235,240,250))
         for i in range(8):
             for f in range(6):
