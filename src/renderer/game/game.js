@@ -1340,7 +1340,7 @@ function frogCanvas(fi,size,rot=-Math.PI/2,bg){
   if(THUMBS[fi]){const cv=document.createElement('canvas');cv.width=cv.height=size*2;cv.getContext('2d').drawImage(THUMBS[fi],0,0,size*2,size*2);return cv}const cvs=document.createElement('canvas');cvs.width=cvs.height=size*2;const c=cvs.getContext('2d');c.scale(2,2);
   if(bg){c.fillStyle=bg;c.fillRect(0,0,size,size)}c.translate(size/2,size/2);c.scale(size/62,size/62);c.rotate(rot);drawFrogKart(c,FROGS[fi],{t:.3});return cvs}
 const frogGrid=$('#frogGrid');
-const DANCES=['shake','twerk','tummy','hop','dab','robot','sway','moonwalk'];  // Zippy shimmies, Lulu twerks, Bonk rubs his tummy, Pip hops with her hat spinning, Mango dabs, Douglas does the robot, Fern hulas, Rocket moonwalks
+const DANCES=['shake','twerk','tummy','hop','dab','robot','silly','moonwalk'];  // Zippy shimmies, Lulu twerks, Bonk rubs his tummy, Pip hops with her hat spinning, Mango dabs, Douglas does the robot, Fern pulls a silly face, Rocket moonwalks
 FROGS.forEach((f,i)=>{const b=document.createElement('button');b.className='card';b.type='button';b.dataset.dance=DANCES[i%DANCES.length];
   const cv=frogCanvas(i,120,-Math.PI/2,null);cv.style.background=`radial-gradient(circle at 50% 55%, ${f.skin}66, ${f.kart}22 70%, #f3eeff)`;
   b.append(cv);b.insertAdjacentHTML('beforeend',`<span class="notes" aria-hidden="true"><i>♪</i><i>♫</i><i>♪</i></span><div class="nm">${f.name}</div><div class="quote">${f.line}</div>

@@ -130,7 +130,11 @@ function kartGeo(f,face,parts){const PT=parts?{ski:new Geo(),body:new Geo()}:nul
   for(const z of [-7,7]){SPH(g,4,37,z,6.5,6.5,6.5,f.skin,[0,0,0],12,8);SPH(g,7.5,37.5,z,4.8,4.8,4.8,'#ffffff',[0,0,0],12,8);if(!face){SPH(g,11.2,37.8,z,2.4,2.6,2.4,'#1d1433',[0,0,0],10,6);SPH(g,12.4,39,z+(z>0?-.8:.8),.9,.9,.9,'#ffffff',[0,0,0],6,4);}if(!f.fat)SPH(g,8.5,28,z*1.1,2,1.6,2,'#ff8fbf',[0,0,0],8,5);}
   if(!face&&!PT)BOX(g,10.4,28.5,0,1.2,1.2,8,'#3b1d5a');
   if(PT)for(const [sd,z] of [['bumL',-1],['bumR',1]]){const b=PT[sd]=new Geo();SPH(b,-13.5,16.5,z*4.6,5.6,6.2,5.4,shade(f.skin,-.04),[0,0,0],14,10);} // a round little bottom, only shown for Lulu's twerk
-  if(PT)for(let q=0;q<=24;q++){const u=q/12-1;SPH(g,10.75-.6*u*u,26.4+2.6*u*u,u*5.6,.8,.8,.8,'#3b1d5a',[0,0,0],8,6);}   // big happy smile
+  if(PT){const m=PT.mouthO=new Geo(),tg=PT.tongue=new Geo();   // a wide-open mouth and a long tongue, for Fern's silly face
+    SPH(m,10.9,27.4,0,1.4,3,5.6,'#3b1d5a',[0,0,0],14,8);SPH(m,11.7,26.6,0,.7,1.2,3.6,'#a3204e',[0,0,0],10,6);
+    SPH(tg,15.6,26.6,0,5.6,1.3,3.3,'#ff6b9a',[0,0,0],14,8);SPH(tg,15.8,27.8,0,4.3,.3,.5,'#e0457a',[0,0,0],8,4);}
+  if(PT)PT.smile=new Geo();
+  if(PT)for(let q=0;q<=24;q++){const u=q/12-1;SPH(PT.smile,10.75-.6*u*u,26.4+2.6*u*u,u*5.6,.8,.8,.8,'#3b1d5a',[0,0,0],8,6);}   // big happy smile
   const a=f.accC;
   switch(f.acc){
     case 'cap':{// tweed flat cap sitting on top, behind the eyes, with a short peak pointing forward
@@ -548,11 +552,13 @@ const DANCE_POSES={
     const A=(r,P)=>({S:v3mix(r.S,P.S,k),E:v3mix(r.E,P.E,k),H:v3mix(r.H,P.H,k)}),aS=A(str,{S:St,E:v3(St,D,11),H:v3(St,D,22)}),aB=A(bnt,{S:Sb,E:Eb,H:v3(Eb,D,12)});
     return {[s>0?'aR':'aL']:aS,[s>0?'aL':'aR']:aB,pt:-.26*k,rl:-.2*s*k,tw:-.2*s*k,by:2.4*hit+.6*Math.sin(t*TAU*2)*(1-Math.min(1,k)),sy:1-.07*hit,sx:1+.05*hit,fx:{p:aS.H,k,q,s}}},
   robot:t=>{const st=Math.floor(t*4)%4;return {tw:[0,-.45,0,.45][st],by:st%2?2.5:0,aL:[st<2?1.57:.35,.15],aR:[st<2?.35:1.57,.15]}},          // Douglas: stiff, jerky robot moves
-  sway:t=>{const w=Math.sin(t*TAU);return {rl:.24*w,bz:w*3,tw:.12*Math.sin(t*TAU*2),aL:[2.3,.35+.45*w],aR:[2.3,.35-.45*w]}},                   // Fern: hula sway, arms waving overhead
+  silly:(t,rig)=>{const k=Math.min(1,t/.3),k2=k*k*(3-2*k),pl=.5-.5*Math.cos(t*TAU*1.6),wg=Math.sin(t*TAU*3.2),nod=Math.sin(t*TAU*.8); // Fern: pulls her mouth wide and blows a raspberry
+    const hand=(r,sd)=>({S:r.S,E:v3mix(r.E,[4,32+1.2*pl,sd*(15+1.5*pl)],k2),H:v3mix(r.H,[11.8,28.6,sd*(6.8+2.6*pl)],k2)});   // elbows up and out, fingers hooked in the corners of her mouth
+    return {aL:hand(rig.L,-1),aR:hand(rig.R,1),silly:k2,wide:pl,wag:.45*wg*k2,droop:-.38-.16*Math.sin(t*TAU*6.4),out:.7+.2*pl,tw:.2*nod*k2,rl:.07*nod*k2,pt:.14*k2,by:2.2*k2+.8*Math.abs(Math.sin(t*TAU*1.6))}},
   moonwalk:t=>{const p=(t*.75)%1,g=p<.8?p/.8:1-(p-.8)/.2;return {bx:5-12*g,pt:.14,by:Math.abs(Math.sin(t*TAU*1.5))*1.5,aL:[.6+.5*Math.sin(t*TAU*1.5),.2],aR:[.6-.5*Math.sin(t*TAU*1.5),.2]}} // Rocket: smooth backwards glide
 };
 function danceFrame(i,t,style){if(!GL3.ok)return null;const gl=GL3.gl,cvs=GL3.cvs,U=GL3.U,S=256,f=FROGS[i];
-  const M=DANCE_MESH[i]||(DANCE_MESH[i]=(()=>{const P=kartGeo(f,false,true),A=s=>({up:upload(P[s].up),fo:upload(P[s].fo),rest:P[s].rest});return {ski:upload(P.ski),body:upload(P.body),hat:P.hat?upload(P.hat):null,bumL:upload(P.bumL),bumR:upload(P.bumR),L:A('L'),R:A('R')}})());
+  const M=DANCE_MESH[i]||(DANCE_MESH[i]=(()=>{const P=kartGeo(f,false,true),A=s=>({up:upload(P[s].up),fo:upload(P[s].fo),rest:P[s].rest});return {ski:upload(P.ski),body:upload(P.body),hat:P.hat?upload(P.hat):null,bumL:upload(P.bumL),bumR:upload(P.bumR),smile:upload(P.smile),mouthO:upload(P.mouthO),tongue:upload(P.tongue),L:A('L'),R:A('R')}})());
   const po=Object.assign({bx:0,by:0,bz:0,tw:0,rl:0,pt:0,sx:1,sy:1,aL:[0,0],aR:[0,0]},(DANCE_POSES[style]||DANCE_POSES.shake)(t,{L:M.L.rest,R:M.R.rest}));
   if(cvs.width<S||cvs.height<S){cvs.width=Math.max(cvs.width,S);cvs.height=Math.max(cvs.height,S);}
   gl.viewport(0,0,S,S);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
@@ -562,7 +568,12 @@ function danceFrame(i,t,style){if(!GL3.ok)return null;const gl=GL3.gl,cvs=GL3.cv
   const sh=f.fat?[1.6,24.4,11.2]:[0,25,9];
   const arm=(sd,[raise,spread])=>m4chain(Mb,m4T(sh[0],sh[1],sd*sh[2]),m4Rx(sd*spread),m4Rz(raise),m4T(-sh[0],-sh[1],-sd*sh[2]));
   drawMesh(M.ski,m4T(0,Math.sin(t*TAU*1.2)*.6,0),[1,1,1],{gl:1.1});
-  drawMesh(M.body,Mb,[1,1,1],{gl:1.1});if(po.bum)for(const [sd,m] of [[-1,M.bumL],[1,M.bumR]]){const c=[-13.5,16.5,sd*4.6],j=po.bum*(1+(po.jig||0)*sd*.12);drawMesh(m,m4chain(Mb,m4T(c[0],c[1]+(po.jig||0)*sd*1.4,c[2]),m4S(j,j,j),m4T(-c[0],-c[1],-c[2])),[1,1,1],{gl:1.1});}
+  drawMesh(M.body,Mb,[1,1,1],{gl:1.1});
+  // the mouth: a smile, or (Fern's silly face) a mouth stretched wide open with the tongue sticking out and waggling
+  if(po.silly){const c=[10.6,27.2,0];drawMesh(M.mouthO,m4chain(Mb,m4T(...c),m4S(1,po.silly*(1-.15*po.wide),po.silly*(1+.45*po.wide)),m4T(-c[0],-c[1],-c[2])),[1,1,1],{gl:1.1});
+    const tp=[11,26.8,0];drawMesh(M.tongue,m4chain(Mb,m4T(...tp),m4Ry(po.wag||0),m4Rz(po.droop||0),m4S(po.silly*(po.out||1),1,1+.15*po.wide),m4T(-tp[0],-tp[1],-tp[2])),[1,1,1],{gl:1.1});}
+  if(!po.silly||po.silly<.35)drawMesh(M.smile,Mb,[1,1,1],{gl:1.1});
+  if(po.bum)for(const [sd,m] of [[-1,M.bumL],[1,M.bumR]]){const c=[-13.5,16.5,sd*4.6],j=po.bum*(1+(po.jig||0)*sd*.12);drawMesh(m,m4chain(Mb,m4T(c[0],c[1]+(po.jig||0)*sd*1.4,c[2]),m4S(j,j,j),m4T(-c[0],-c[1],-c[2])),[1,1,1],{gl:1.1});}
   if(M.hat)drawMesh(M.hat,m4chain(Mb,m4T(-4,0,0),m4Ry(po.hat||0),m4T(4,0,0)),[1,1,1],{gl:1.1});
   // an arm pose is either [raise, spread] (the whole arm swings from the shoulder) or {S,E,H} points for shoulder, elbow and hand (the arm bends)
   for(const [sd,A,P] of [[-1,M.L,po.aL],[1,M.R,po.aR]]){const r=A.rest,mu=Array.isArray(P)?arm(sd,P):m4mul(Mb,segM(r.S,r.E,P.S,P.E)),mf=Array.isArray(P)?mu:m4mul(Mb,segM(r.E,r.H,P.E,P.H));
