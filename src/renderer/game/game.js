@@ -420,6 +420,7 @@ function faceUpdate(now,dt){const speaking=MOUTH.raf&&MOUTH.i>=0;const ptr=now-P
     const a=1-Math.exp(-dt*18);F.look[0]+=(F.lookT[0]-F.look[0])*a;F.look[1]+=(F.lookT[1]-F.look[1])*a;
     if(now>F.nextBlink){F.blinkStart=now;const fs=FUNNY_BLINK[i];F.style=fs&&Math.random()<.55?fs:'normal';F.nextBlink=now+(BLINK_LEN[F.style]||.2)*1000+2200+Math.random()*4200+(F.style==='normal'&&Math.random()<.2?-1800:0);}
     blinkShape(F,(now-(F.blinkStart||-1e9))/1000);
+    {const cd=frogGrid.children[i];if(cd&&cd.matches(':hover')){F.smileT=1;F.nextSmile=Math.max(F.nextSmile,now+700);}}
     if(now>F.nextSmile){F.smileT=F.smileT>.6?.4:1;F.nextSmile=now+(F.smileT>.6?1200+Math.random()*1500:2500+Math.random()*5000);}
     F.smile+=(F.smileT-F.smile)*(1-Math.exp(-dt*7));});}
 // funny signature blinks: Zippy winks, Lulu flutters her lashes, Bonk nods off, Pip blinks out of sync, Douglas Moleseed's eyes boing, Fern scrunches
@@ -1328,13 +1329,14 @@ function frogCanvas(fi,size,rot=-Math.PI/2,bg){
   if(THUMBS[fi]){const cv=document.createElement('canvas');cv.width=cv.height=size*2;cv.getContext('2d').drawImage(THUMBS[fi],0,0,size*2,size*2);return cv}const cvs=document.createElement('canvas');cvs.width=cvs.height=size*2;const c=cvs.getContext('2d');c.scale(2,2);
   if(bg){c.fillStyle=bg;c.fillRect(0,0,size,size)}c.translate(size/2,size/2);c.scale(size/62,size/62);c.rotate(rot);drawFrogKart(c,FROGS[fi],{t:.3});return cvs}
 const frogGrid=$('#frogGrid');
-FROGS.forEach((f,i)=>{const b=document.createElement('button');b.className='card';b.type='button';
+const DANCES=['shake','twirl','wobble','hop','groove','robot','sway','moonwalk'];  // Zippy shimmies, Lulu twirls, Bonk jiggles, Pip hops, Mango grooves, Douglas does the robot, Fern hulas, Rocket moonwalks
+FROGS.forEach((f,i)=>{const b=document.createElement('button');b.className='card';b.type='button';b.dataset.dance=DANCES[i%DANCES.length];
   const cv=frogCanvas(i,120,-Math.PI/2,null);cv.style.background=`radial-gradient(circle at 50% 55%, ${f.skin}66, ${f.kart}22 70%, #f3eeff)`;
-  b.append(cv);b.insertAdjacentHTML('beforeend',`<div class="nm">${f.name}</div><div class="quote">${f.line}</div>
+  b.append(cv);b.insertAdjacentHTML('beforeend',`<span class="notes" aria-hidden="true"><i>♪</i><i>♫</i><i>♪</i></span><div class="nm">${f.name}</div><div class="quote">${f.line}</div>
   <div class="stat">Speed<span class="bar"><i style="width:${f.spd*20}%"></i></span></div>
   <div class="stat">Get-go<span class="bar"><i style="width:${f.acl*20}%"></i></span></div>
   <div class="stat">Turning<span class="bar"><i style="width:${f.hnd*20}%"></i></span></div>`);
-  b.onclick=()=>{opts.frog=i;saveOpts();frogGrid.querySelectorAll('.card').forEach((x,j)=>x.classList.toggle('sel',j===i));frogVoice(i);b.classList.remove('boing');void b.offsetWidth;b.classList.add('boing');};
+  b.onclick=()=>{opts.frog=i;saveOpts();frogGrid.querySelectorAll('.card').forEach((x,j)=>x.classList.toggle('sel',j===i));frogVoice(i);b.classList.remove('boing');void b.offsetWidth;b.classList.add('boing');clearTimeout(b._bt);b._bt=setTimeout(()=>b.classList.remove('boing'),600);};
   b.ondblclick=()=>show('sTrack');
   if(i===opts.frog)b.classList.add('sel');frogGrid.append(b)});
 
