@@ -223,7 +223,18 @@ function deco3(g,d,th){
 
 // ---- height helpers ----
 function hh(T,i){return T.hgt?T.hgt[((i%TN)+TN)%TN]:0}
-function kH(T,k){if(!T.hgt)return 0;const i=k.idx,q=T.pts[i];const f=clamp(((k.x-q.x)*q.tx+(k.y-q.y)*q.ty)/(T.L/TN),-1,1);const j=f>=0?i+1:i-1;return lerp(hh(T,i),hh(T,j),Math.abs(f))}
+// height of the track under a kart. A kart's position between two track points is found along the track's
+// smoothly-turning sideways direction, so the height changes evenly even round tight curves like the tower spiral
+// (no little steps as the nearest point changes).
+function segT(q,n,x,y){const dx=n.x-q.x,dy=n.y-q.y,ex=n.nx-q.nx,ey=n.ny-q.ny,wx=x-q.x,wy=y-q.y,cr=(ax,ay,bx,by)=>ax*by-ay*bx;
+  const A=-cr(dx,dy,ex,ey),B=cr(wx,wy,ex,ey)-cr(dx,dy,q.nx,q.ny),C=cr(wx,wy,q.nx,q.ny);
+  if(Math.abs(A)<1e-9)return Math.abs(B)<1e-12?-1:-C/B;const D=B*B-4*A*C;if(D<0)return -1;
+  const r=Math.sqrt(D),t1=(-B+r)/(2*A),t2=(-B-r)/(2*A),ok=t=>t>=-1e-6&&t<=1+1e-6;
+  return ok(t1)&&ok(t2)?(Math.abs(t1-.5)<Math.abs(t2-.5)?t1:t2):ok(t1)?t1:ok(t2)?t2:-1}
+function kH(T,k){if(!T.hgt)return 0;const i=k.idx,q=T.pts[i];let t=segT(q,T.pts[(i+1)%TN],k.x,k.y);if(t>=0)return lerp(hh(T,i),hh(T,i+1),Math.min(1,t));
+  t=segT(T.pts[(i-1+TN)%TN],q,k.x,k.y);if(t>=0)return lerp(hh(T,i-1),hh(T,i),Math.min(1,t));return hh(T,i)}
+// smooth track height near a point, searching along the track from a known index (for tracks that cross over themselves)
+function hNear(T,x,y,guess){return kH(T,{idx:nearestIdx(T,x,y,guess,30),x,y})}
 const FLOATS={lilypad:1,lotus:1,ripple:1,duck:1,fish:1,log:1,bubbles:1,reed:1,ship:1,ball:1,barrel:1,cloud:1,ghost:1,starDeco:1,planet:1,glow:1,ember:1};
 const BIGD={barn:1,ship:1,building:1,island:1,tower:1,pyramid:1,lava:1};
 // ---- world build ----
@@ -375,8 +386,9 @@ function render3D(){
   const sh=G.shake>0?(Math.random()-.5)*10*G.shake:0;
   const port=H>W*1.05;const dist=port?175:150,hgt=port?78:66;let ex=P.x-Math.cos(yaw)*dist,ez=P.y-Math.sin(yaw)*dist;
   {const ci=nearestIdx(T,ex,ez,P.idx,30),q=T.pts[ci];const lat=(ex-q.x)*q.nx+(ez-q.y)*q.ny,lim=T.w/2-8;if(Math.abs(lat)>lim){const e=Math.abs(lat)-lim;ex-=q.nx*Math.sign(lat)*e;ez-=q.ny*Math.sign(lat)*e;}}
-  const lh=(x,z)=>T.tower?hh(T,nearestIdx(T,x,z,P.idx,30)):T.hAt(x,z);
-  const pH=kH(T,P)+P.z*.6,eH=Math.max(lh(ex,ez),pH-20),tH=lh(P.x+Math.cos(yaw)*140,P.y+Math.sin(yaw)*140);
+  const lh=(x,z)=>T.tower?hNear(T,x,z,P.idx):T.hAt(x,z);
+  let pH=kH(T,P)+P.z*.6,eH=Math.max(lh(ex,ez),pH-20),tH=lh(P.x+Math.cos(yaw)*140,P.y+Math.sin(yaw)*140);
+  if(T.tower){const sm=(key,v)=>G[key]=G[key]==null||Math.abs(G[key]-v)>400?v:G[key]+(v-G[key])*.3;eH=sm('_cEH',eH);tH=sm('_cTH',tH);}
   const eye=[ex+sh,hgt+eH+sh*.5,ez],tgt=[P.x+Math.cos(yaw)*140,16+Math.max(tH,pH-60),P.y+Math.sin(yaw)*140];CAM3=eye;
   const fov=((port?74:60)+(P.boost>0||P.star>0?8:0)+Math.max(0,P.speed)/P.maxS*4)*Math.PI/180;G.fov3=(G.fov3||fov)+(fov-(G.fov3||fov))*.08;
   const hiV=Math.max(0,pH);P3=m4persp(G.fov3,W/H,4,(T.tower?11000:7000)+hiV*1.6);VP3=m4mul(P3,m4look(eye,tgt,[0,1,0]));
@@ -403,7 +415,7 @@ function render3D(){
     const hop=k.hop>0?Math.sin(k.hop/.35*Math.PI)*14:(k.ko>0?Math.abs(Math.sin(k.ko*6))*12:0);
     const roll=(k.dizzy>0?Math.sin(t*10)*.12:0)+(k.flip>0?(1-k.flip/1.25)*TAU*2:0);
     const tint=k.star>0?hsl2rgb((t*1.2)%1,.9,.7):[1,1,1];const em=k.hurt>0?[k.hurt*1.6,0,k.hurt*.4]:k.star>0?[.15,.15,.15]:[0,0,0];
-    const pitch=T.hgt&&k.spin<=0&&k.ko<=0?Math.atan(k.slope)+(k.z>0?clamp(k.vz/1500,-.25,.25):0):0;
+    const pt0=T.hgt&&k.spin<=0&&k.ko<=0?Math.atan(k.slope)+(k.z>0?clamp(k.vz/1500,-.25,.25):0):0;k._pt=k._pt==null?pt0:k._pt+(pt0-k._pt)*.25;const pitch=k._pt;   // eased so the nose doesn't twitch
     const rv=k.rev||0;const vib=rv>0?(Math.random()-.5)*1.6*rv:0;
     const bob=Math.sin(t*3.2+k.id*1.7)*1.6,plane=clamp(k.speed/k.maxS,0,1.2)*.07,wh=wheelieAngle(k);
     // wheelie pivots on the back of the hull so the tail stays in the water
