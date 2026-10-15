@@ -701,8 +701,10 @@ function getTrack(i){
     T.hAt=(x,y)=>{const fx=(x-gx0)/cs,fy=(y-gy0)/cs;const ix=Math.floor(fx),iy=Math.floor(fy);if(ix<0||iy<0||ix>=nx-1||iy>=ny-1)return 0;const tx=fx-ix,ty=fy-iy;const g=(a,b)=>grid[b*nx+a];
       return (g(ix,iy)*(1-tx)+g(ix+1,iy)*tx)*(1-ty)+(g(ix,iy+1)*(1-tx)+g(ix+1,iy+1)*tx)*ty};
   }else T.hAt=()=>0;
+  if(T.tower)T.hAt=(x,y)=>{if(!G||!G.karts||G.T!==T)return 0;let best=G.karts[0],bd=1e18;for(const k of G.karts){const d=(k.x-x)**2+(k.y-y)**2;if(d<bd){bd=d;best=k}}
+    const i=nearestIdx(T,x,y,best.idx,40),p=T.pts[i];return (p.x-x)**2+(p.y-y)**2>(T.w/2+220)**2?0:hh(T,i)};
   {const ro=mulberry(500+i*19);const cd=(a,b)=>Math.min(Math.abs(a-b),TN-Math.abs(a-b));
-    const busy=j=>j<40||j>TN-15||T.boxes.some(b=>cd(b.i,j)<16)||T.pads.some(p=>cd(p.i,j)<14);
+    const busy=j=>j<40||j>TN-15||(T.tower&&T.hgt[j]>20)||T.boxes.some(b=>cd(b.i,j)<16)||T.pads.some(p=>cd(p.i,j)<14);
     const nS=[0,1,2,2][T.lvl-1];
     for(let n=0;n<nS;n++){let best=-1,bv=1e9;const c0=Math.floor((n+.55)/nS*TN);for(let o=-40;o<=40;o++){const j=(c0+o+TN)%TN;if(busy(j)||T.spinners.some(s=>cd(s.i,j)<40))continue;let cv=0;for(let q=-6;q<=6;q++)cv+=T.curv[(j+q+TN)%TN];if(cv<bv){bv=cv;best=j}}
       if(best<0)continue;const p=T.pts[best];T.spinners.push({i:best,x:p.x,y:p.y,len:T.w/2-4,spd:(T.lvl===2?.95:T.lvl===3?1.35:1.5)*(n%2?-1:1),ph:ro()*TAU});}
@@ -718,6 +720,8 @@ function getTrack(i){
   return trackCache[i]=T;
 }
 
+// on tower tracks (which cross over themselves) things only touch racers at the same height
+function sameLvl(k,i){const T=G.T;return !T.tower||i==null||Math.abs(kH(T,k)+k.z-hh(T,i))<90}
 function nearestIdx(T,x,y,guess,span=24){let best=guess,bd=1e18;for(let k=-span;k<=span;k++){const i=(guess+k+TN)%TN;const p=T.pts[i];const d=(p.x-x)**2+(p.y-y)**2;if(d<bd){bd=d;best=i}}return best}
 function nearestIdxFull(T,x,y){let best=0,bd=1e18;for(let i=0;i<TN;i+=2){const p=T.pts[i];const d=(p.x-x)**2+(p.y-y)**2;if(d<bd){bd=d;best=i}}return nearestIdx(T,x,y,best,3)}
 
@@ -808,7 +812,7 @@ function update(dt){
   // kart collisions
   const K=G.karts;
   // rubbing is free: jetskis that touch just slide apart sideways (across the track), so nobody loses speed or gets blocked
-  for(let i=0;i<K.length;i++)for(let j=i+1;j<K.length;j++){const a=K[i],b=K[j];const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy);if(d<38&&d>0){const push=(38-d)/2,nx=dx/d,ny=dy/d;
+  for(let i=0;i<K.length;i++)for(let j=i+1;j<K.length;j++){const a=K[i],b=K[j];if(T.tower&&Math.abs(kH(T,a)+a.z-kH(T,b)-b.z)>70)continue;const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy);if(d<38&&d>0){const push=(38-d)/2,nx=dx/d,ny=dy/d;
     const q=T.pts[a.idx],lat=dx*q.nx+dy*q.ny,sg=Math.abs(lat)>.5?Math.sign(lat):(i%2?1:-1);let sx=nx*.15+q.nx*sg*.85,sy=ny*.15+q.ny*sg*.85;const sl=Math.hypot(sx,sy)||1;sx/=sl;sy/=sl;
     a.x-=sx*push;a.y-=sy*push;b.x+=sx*push;b.y+=sy*push;
     if(a.star>0&&b.star<=0)hitKart(b,'spin',DMG.bump);else if(b.star>0&&a.star<=0)hitKart(a,'spin',DMG.bump);
@@ -819,10 +823,10 @@ function update(dt){
   for(const k of K){if(k.ko>0)continue;
     const bump=(cx,cy,R,o)=>{const dx=k.x-cx,dy=k.y-cy,d=Math.hypot(dx,dy);if(d>=R||d<=0)return;const nx=dx/d,ny=dy/d;k.x=cx+nx*R;k.y=cy+ny*R;const vn=-(k.vx*nx+k.vy*ny);
       if(vn>0){k.vx+=1.8*vn*nx;k.vy+=1.8*vn*ny;k.speed*=clamp(1-vn/1000,.4,1);if(o)o.hit=.3;obstacleHit(k,vn);}};
-    for(const bm of T.bumpers){if(bm.gone>0||k.spinHit>0)continue;if((k.x-bm.x)**2+(k.y-bm.y)**2<(bm.r+18)**2){bm.gone=4;k.spinHit=1.2;
+    for(const bm of T.bumpers){if(bm.gone>0||k.spinHit>0||!sameLvl(k,bm.i))continue;if((k.x-bm.x)**2+(k.y-bm.y)**2<(bm.r+18)**2){bm.gone=4;k.spinHit=1.2;
       if(hitKart(k,'poo',10)){G.texts.push({x:k.x,y:k.y-30,s:['BZZZT!','SPLAT!','WHOOPS!','BUZZ OFF!'][Math.random()*4|0],c:'#ffe14d',life:.9,max:.9});burst(bm.x,bm.y,'#ffe14d',8,'star');
         if(k.isP){buzzSound(1);G.shake=.3}else{const d2=Math.hypot(k.x-G.player.x,k.y-G.player.y);if(d2<600)buzzSound(.5*(1-d2/600))}}}}
-    for(const sp of T.spinners){bump(sp.x,sp.y,30,null);if(k.spinHit>0)continue;
+    for(const sp of T.spinners){if(!sameLvl(k,sp.i))continue;bump(sp.x,sp.y,30,null);if(k.spinHit>0)continue;
       const a=sp.ph+sp.spd*G.t,ux=Math.cos(a),uy=Math.sin(a);const rx=k.x-sp.x,ry=k.y-sp.y;const al=clamp(rx*ux+ry*uy,0,sp.len);
       const cx=sp.x+ux*al,cy=sp.y+uy*al,dd=Math.hypot(k.x-cx,k.y-cy);
       if(dd<22){const sg=Math.sign(sp.spd)||1;const px=-uy*sg,py=ux*sg;const sw=Math.abs(sp.spd*al);k.x+=px*(26-dd);k.y+=py*(26-dd);
@@ -830,9 +834,9 @@ function update(dt){
         G.texts.push({x:k.x,y:k.y-30,s:['SPLOOSH!','DRENCHED!','SPLASH!'][Math.random()*3|0],c:'#7ef3ff',life:.9,max:.9});burst(k.x,k.y,'#c9f3ff',14);
         if(k.isP){frogOof(.75);G.shake=.45}else{const d2=Math.hypot(k.x-G.player.x,k.y-G.player.y);if(d2<500)frogOof(.6,.5*(1-d2/500))}}}}
   // item boxes
-  for(const bx of T.boxes){if(bx.t>0){bx.t-=dt;continue}for(const k of K){if(k.ko>0)continue;if((k.x-bx.x)**2+(k.y-bx.y)**2<34*34){bx.t=2.5;burst(bx.x,bx.y,'#fff',8);if(!k.item&&k.roul<=0&&!(k.tongueT>0)){k.roul=1.1;k.rItem=pickItem(k.place,K.length);if(k.isP)beep(1000,.08,'square',.05)}break}}}
+  for(const bx of T.boxes){if(bx.t>0){bx.t-=dt;continue}for(const k of K){if(k.ko>0||!sameLvl(k,bx.i))continue;if((k.x-bx.x)**2+(k.y-bx.y)**2<34*34){bx.t=2.5;burst(bx.x,bx.y,'#fff',8);if(!k.item&&k.roul<=0&&!(k.tongueT>0)){k.roul=1.1;k.rItem=pickItem(k.place,K.length);if(k.isP)beep(1000,.08,'square',.05)}break}}}
   // boost pads
-  for(const pd of T.pads){for(const k of K){const ca=Math.cos(pd.a),sa=Math.sin(pd.a);const dx=k.x-pd.x,dy=k.y-pd.y;const along=dx*ca+dy*sa,side=-dx*sa+dy*ca;if(Math.abs(along)<50&&Math.abs(side)<36){if(k.boost<.9&&k.isP)beep(300,.3,'sawtooth',.05,400);k.boost=Math.max(k.boost,1.0);}}}
+  for(const pd of T.pads){for(const k of K){const ca=Math.cos(pd.a),sa=Math.sin(pd.a);const dx=k.x-pd.x,dy=k.y-pd.y;const along=dx*ca+dy*sa,side=-dx*sa+dy*ca;if(Math.abs(along)<50&&Math.abs(side)<36&&sameLvl(k,pd.i)){if(k.boost<.9&&k.isP)beep(300,.3,'sawtooth',.05,400);k.boost=Math.max(k.boost,1.0);}}}
   // birds fly over and drop poo; it lands as a skiddy puddle
   if(G.state!=='count'){G.birdT-=dt;if(G.birdT<=0){const lv=T.lvl||1;G.birdT=[14,11,9,8][lv-1]+Math.random()*[8,6,5,4][lv-1];if(G.puddles.length<4)spawnBird();}}
   for(let i=G.birds.length-1;i>=0;i--){const b=G.birds[i];b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;
@@ -843,11 +847,11 @@ function update(dt){
     if(p.h<=0){G.poos.splice(i,1);G.puddles.push({x:p.x,y:p.y,i:p.i,lat:p.lat,r:24+Math.random()*8,life:12,grow:0,rot:Math.random()*TAU,v:Math.random()*4|0});burst(p.x,p.y,'#f4f4ee',6);burst(p.x,p.y,'#8a8f74',3);
       const dp=Math.hypot(p.x-G.player.x,p.y-G.player.y);if(dp<700)splatSound(1-dp/700);}}
   for(let i=G.puddles.length-1;i>=0;i--){const pd=G.puddles[i];pd.life-=dt;pd.grow=Math.min(1,pd.grow+dt*6);if(pd.life<=0){G.puddles.splice(i,1);continue}
-    for(const k of K){if(k.ko>0||k.slipCD>0||k.fin)continue;const R=pd.r*pd.grow+10;if((k.x-pd.x)**2+(k.y-pd.y)**2<R*R){k.slipCD=1.6;
+    for(const k of K){if(k.ko>0||k.slipCD>0||k.fin||!sameLvl(k,pd.i))continue;const R=pd.r*pd.grow+10;if((k.x-pd.x)**2+(k.y-pd.y)**2<R*R){k.slipCD=1.6;
       if(hitKart(k,'poo')){G.texts.push({x:k.x,y:k.y-30,s:['EWW!','SKID!','SPLAT!','YUCK!'][Math.random()*4|0],c:'#f4f4ee',life:.9,max:.9});burst(k.x,k.y,'#ffffff',8);
         if(k.isP)skidSound(1);else{const dp=Math.hypot(k.x-G.player.x,k.y-G.player.y);if(dp<600)skidSound(.5*(1-dp/600))}}}}}
   // hazards
-  for(let i=G.haz.length-1;i>=0;i--){const h=G.haz[i];h.grace-=dt;for(const k of K){if(k===h.owner&&h.grace>0)continue;if((k.x-h.x)**2+(k.y-h.y)**2<30*30){if(k.star<=0)hitKart(k,'slip');burst(h.x,h.y,'#3fae3f',8);G.haz.splice(i,1);break}}}
+  for(let i=G.haz.length-1;i>=0;i--){const h=G.haz[i];h.grace-=dt;for(const k of K){if(k===h.owner&&h.grace>0||!sameLvl(k,h.i))continue;if((k.x-h.x)**2+(k.y-h.y)**2<30*30){if(k.star<=0)hitKart(k,'slip');burst(h.x,h.y,'#3fae3f',8);G.haz.splice(i,1);break}}}
   // projectiles
   for(let i=G.proj.length-1;i>=0;i--){const p=G.proj[i];p.life-=dt;p.grace-=dt;
     if(p.type==='fly'){p.idx=nearestIdx(T,p.x,p.y,p.idx,12);let tx,ty;
@@ -857,7 +861,7 @@ function update(dt){
     if(p.type==='bubble'){p.idx=nearestIdx(T,p.x,p.y,p.idx,12);const q=T.pts[p.idx];const lat=(p.x-q.x)*q.nx+(p.y-q.y)*q.ny;if(Math.abs(lat)>T.w/2-10){const vn=p.vx*q.nx+p.vy*q.ny;if(vn*lat>0){p.vx-=2*vn*q.nx;p.vy-=2*vn*q.ny;p.x-=q.nx*Math.sign(lat)*6;p.y-=q.ny*Math.sign(lat)*6;}}}
     if(Math.random()<.5)G.parts.push({x:p.x,y:p.y,vx:0,vy:0,life:.3,max:.3,c:p.type==='fly'?'rgba(255,255,255,.6)':'rgba(168,236,255,.7)',s:4});
     let gone=p.life<=0;
-    for(const k of K){if(gone)break;if(k===p.owner&&p.grace>0)continue;if((k.x-p.x)**2+(k.y-p.y)**2<32*32){hitKart(k,'spin',p.type==='fly'?DMG.fly:DMG.spin);burst(p.x,p.y,'#a8ecff',10);gone=true;}}
+    for(const k of K){if(gone)break;if(k===p.owner&&p.grace>0||!sameLvl(k,p.idx))continue;if((k.x-p.x)**2+(k.y-p.y)**2<32*32){hitKart(k,'spin',p.type==='fly'?DMG.fly:DMG.spin);burst(p.x,p.y,'#a8ecff',10);gone=true;}}
     if(!gone)for(let j=G.haz.length-1;j>=0;j--){const h=G.haz[j];if((h.x-p.x)**2+(h.y-p.y)**2<30*30){G.haz.splice(j,1);burst(h.x,h.y,'#3fae3f',8);gone=true;break}}
     if(gone)G.proj.splice(i,1);
   }
@@ -894,7 +898,7 @@ function makeCarp(T){const n=[3,4,5,5][(T.lvl||1)-1],out=[];const r=mulberry(T.i
 function updateCarp(dt){const T=G.T;
   for(const c of G.carp){c.wag+=dt*(c.state==='swim'?9:4);c.cool=Math.max(0,c.cool-dt);
     // hunt: pick a racer heading this way, swim across its path, then burst up in front of it
-    c.ign=c.ign||{};if(!c.held&&G.state!=='count'){let best=null,bs=1e9;for(const k of G.karts){if(k.fin||k.ko>0||k.gulped||k.spitCD>0||(c.ign[k.id]||0)>G.t)continue;
+    c.ign=c.ign||{};if(!c.held&&G.state!=='count'){let best=null,bs=1e9;for(const k of G.karts){if(k.fin||k.ko>0||k.gulped||k.spitCD>0||(c.ign[k.id]||0)>G.t||(G.T.tower&&kH(G.T,k)>30))continue;
         const dx=c.x-k.x,dy=c.y-k.y,d=Math.hypot(dx,dy);if(d>1400)continue;const vv=Math.hypot(k.vx,k.vy)||1;const app=(k.vx*dx+k.vy*dy)/(vv*d);if(app<.35&&d>260)continue;const sc=d*(k.isP?.55:1);if(sc<bs){bs=sc;best=k}}
       c.prey=best;}else if(G.state==='count')c.prey=null;
     if(c.prey&&!c.held){const k=c.prey,vv=Math.hypot(k.vx,k.vy),d=Math.hypot(c.x-k.x,c.y-k.y);const lead=clamp(d/Math.max(250,vv+c.spd*.5),.15,1.4);c.tx=k.x+k.vx*lead;c.ty=k.y+k.vy*lead;
@@ -910,7 +914,7 @@ function updateCarp(dt){const T=G.T;
     else if(c.state==='surface'){c.rise=Math.min(1,c.rise+dt*3.5);c.mouth=c.held?Math.max(.15,c.mouth-dt*6):Math.min(1,c.mouth+dt*5);if(c.t<=0&&!c.held){c.state='swim';c.t=3.5+Math.random()*4;splashAt(c.x,c.y,14,1);}}
     // gulp!
     const hx=c.x+Math.cos(c.a)*108,hy=c.y+Math.sin(c.a)*108;
-    if(c.state==='surface'&&c.mouth>.6&&!c.held&&G.state!=='count'){for(const k of G.karts){if(k.fin||k.ko>0||k.gulped||k.z>15||k.spitCD>0)continue;if((k.x-hx)**2+(k.y-hy)**2>108*108)continue;
+    if(c.state==='surface'&&c.mouth>.6&&!c.held&&G.state!=='count'){for(const k of G.karts){if(k.fin||k.ko>0||k.gulped||k.z>15||k.spitCD>0||(G.T.tower&&kH(G.T,k)>30))continue;if((k.x-hx)**2+(k.y-hy)**2>108*108)continue;
         if(k.star>0){continue}
         if(k.shield>0){k.shield=0;burst(k.x,k.y,'#7ef3ff',14);popText(k.x,k.y-30,'POP!','#7ef3ff');c.state='swim';c.t=3;c.cool=2;splashAt(hx,hy,10,1);break}
         c.held=k;c.holdT=.95;k.gulped=c;k.speed=k.vx=k.vy=0;k.boost=0;G.texts.push({x:hx,y:hy-20,s:'GULP!',c:'#ff8a1f',life:1,max:1,big:1});splashAt(hx,hy,16,1.2);
@@ -937,7 +941,7 @@ function updateFX(dt){
 }
 // ---- Sticky Tongue: lock on to the frog in front and yank it back ----
 function tongueTarget(k){let best=null,bd=1e9;const ca=Math.cos(k.a),sa=Math.sin(k.a);
-  for(const o of G.karts){if(o===k||o.fin||o.ko>0||o.gulped)continue;const dx=o.x-k.x,dy=o.y-k.y,d=Math.hypot(dx,dy);if(d<40||d>720)continue;
+  for(const o of G.karts){if(o===k||o.fin||o.ko>0||o.gulped||(G.T.tower&&Math.abs(kH(G.T,o)+o.z-kH(G.T,k)-k.z)>150))continue;const dx=o.x-k.x,dy=o.y-k.y,d=Math.hypot(dx,dy);if(d<40||d>720)continue;
     const fw=(dx*ca+dy*sa)/d;if(fw<.8)continue;if(Math.abs(o.z-k.z)>120)continue;if(d<bd){bd=d;best=o}}return best}
 function fireTongue(k){if(k.tongueCD>0||k.tng||k.spin>0||k.gulped||k.ko>0)return;const tgt=tongueTarget(k);
   const d=tgt?Math.hypot(tgt.x-k.x,tgt.y-k.y):520;k.tng={tgt,t:0,out:Math.max(.12,d/2000),phase:'out',hit:false};k.tongueCD=1;

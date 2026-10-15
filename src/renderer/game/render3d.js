@@ -254,20 +254,22 @@ function buildWorld3D(T){
      return {x:lerp(a.x,b.x,f)+nx*lat,y:lerp(a.y,b.y,f)+ny*lat,h:lerp(hh(T,i),hh(T,i+1),f)}};
    // grey stone edging, like a modern garden pond
    const STONES=['#8e9196','#9fa2a7','#7b7f85','#b1b3b6','#6f7378','#a6a39c'];
-   const stone=(x,y,z,rad,ht,rot,col)=>gSphere(g,mkXf([x,y,z],[rad,ht,rad*(.7+lr()*.3)],[0,rot,0]),col,6,3);
+   const lowOK=h=>!T.tower||h<6;
+   const stone=(x,y,z,rad,ht,rot,col)=>!lowOK(y-4)?0:gSphere(g,mkXf([x,y,z],[rad,ht,rad*(.7+lr()*.3)],[0,rot,0]),col,6,3);
    for(const side of [-1,1]){for(let s=0;s<T.L;s+=32+lr()*16){const rad=17+lr()*13,q=at(s,side*(w/2+8+rad*.6+lr()*6));stone(q.x,q.h+2,q.y,rad,rad*(.45+lr()*.35),lr()*TAU,STONES[(lr()*STONES.length)|0]);
        if(lr()<.22){const r2=8+lr()*7,q2=at(s+lr()*20,side*(w/2+rad*1.6+r2+lr()*10));stone(q2.x,q2.h+1,q2.y,r2,r2*.5,lr()*TAU,STONES[(lr()*STONES.length)|0]);}}
      // tall thin greenery dotted off the track: rushes, grasses and bulrushes
-     for(let s=lr()*200;s<T.L;s+=150+lr()*260){const q=at(s,side*(w/2+70+lr()*520));const n=5+(lr()*6|0),cat=lr()<.45;
+     for(let s=lr()*200;s<T.L;s+=150+lr()*260){const q=at(s,side*(w/2+70+lr()*520));if(!lowOK(q.h))continue;const n=5+(lr()*6|0),cat=lr()<.45;
        for(let m=0;m<n;m++){const ox=(lr()-.5)*26,oz=(lr()-.5)*26,ht=70+lr()*90,lean=(lr()-.5)*.25,lean2=(lr()-.5)*.25;const col=['#3f9a3f','#4fae45','#5cbf52','#2f8a3a','#6cc85e'][(lr()*5)|0];
          gCyl(g,mkXf([q.x+ox,q.h+ht/2,q.y+oz],[1,ht,1],[lean,0,lean2]),col,.6,2.2,5,false);
          if(cat&&m<3){const tx=q.x+ox+Math.sin(lean2)*ht*.4*-1,tz=q.y+oz+Math.sin(lean)*ht*.4;gCyl(g,mkXf([q.x+ox-Math.sin(lean2)*ht*.38,q.h+ht*.86,q.y+oz+Math.sin(lean)*ht*.38],[1,16,1],[lean,0,lean2]),'#7a4a24',3.4,3.4,6,true);}}
        for(let m=0;m<3;m++)stone(q.x+(lr()-.5)*40,q.h+1,q.y+(lr()-.5)*40,7+lr()*8,4+lr()*4,lr()*TAU,STONES[(lr()*STONES.length)|0]);}
-     for(let s=20;s<T.L;s+=150+lr()*120){const q=at(s,side*(w/2+90+lr()*80));lilyPad(q.x,q.h+3,q.y,26+lr()*18,lr()*TAU,lr()<.5?LILY:LILY2);if(lr()<.2){SPH(g,q.x,q.h+9,q.y,8,6,8,'#ffb3dd',[0,0,0],8,5);SPH(g,q.x,q.h+12,q.y,3.5,3,3.5,'#ffe14d');}}}}
+     for(let s=20;s<T.L;s+=150+lr()*120){const q=at(s,side*(w/2+90+lr()*80));if(!lowOK(q.h))continue;lilyPad(q.x,q.h+3,q.y,26+lr()*18,lr()*TAU,lr()<.5?LILY:LILY2);if(lr()<.2){SPH(g,q.x,q.h+9,q.y,8,6,8,'#ffb3dd',[0,0,0],8,5);SPH(g,q.x,q.h+12,q.y,3.5,3,3.5,'#ffe14d');}}}}
   // raised wave sections stand on walls of foamy water
-  if(T.hgt){const e0=w/2+34;for(const side of [-1,1])for(let i=0;i<TN;i++){const a=P[i],b=P[(i+1)%TN],ha=hh(T,i),hb=hh(T,i+1);if(ha<1&&hb<1)continue;
+  if(T.hgt&&!T.tower){const e0=w/2+34;for(const side of [-1,1])for(let i=0;i<TN;i++){const a=P[i],b=P[(i+1)%TN],ha=hh(T,i),hb=hh(T,i+1);if(ha<1&&hb<1)continue;
     const pt=(q,y)=>[q.x+q.nx*e0*side,y,q.y+q.ny*e0*side];const n=[a.nx*side,0,a.ny*side];const lip=Math.min(ha,hb,10);
     g.quad(pt(a,ha+3),pt(b,hb+3),pt(b,hb+3-lip),pt(a,ha+3-lip),n,hex3('#f2fdff'));g.quad(pt(a,ha+3-lip),pt(b,hb+3-lip),pt(b,0),pt(a,0),n,hex3(Math.floor(i/3)%2?'#7fdaf3':'#6fd1ee'));}}
+  if(T.tower)buildTower(g,T,P,w);
   // start line checker + arch
   const s0=P[0];const nC=Math.ceil(w/20);
   for(let i=0;i<nC;i++)for(let j=0;j<3;j++){const c=(i+j)%2?[.1,.08,.2]:[1,1,1];const l0=-w/2+i*20,l1=Math.min(w/2,l0+20),o0=-30+j*20,o1=o0+20;const p=(l,o)=>[s0.x+s0.nx*l+s0.tx*o,1.4,s0.y+s0.ny*l+s0.ty*o];g.quad(p(l0,o0),p(l0,o1),p(l1,o1),p(l1,o0),up,c);}
@@ -281,6 +283,31 @@ function buildWorld3D(T){
   // decorations
   for(const d of T.decos)deco3(g,d,th);
   return GL3.world[T.idx]=upload(g);
+}
+// Tower Twister: a candy-striped tower with the water slide corkscrewing round it, slide rails and an underside on
+// every raised stretch, and pillars holding up the big drop (never placed where they'd hit the track below)
+function buildTower(g,T,P,w){const tw=T.tower,up=[0,1,0];
+  const RA='#ffffff',RB='#ff4f6d',UNDER='#8b97b0';
+  for(let i=0;i<TN;i++){const a=P[i],b=P[(i+1)%TN],ha=hh(T,i),hb=hh(T,i+1);if(ha<6&&hb<6)continue;
+    const c=hex3(Math.floor(i/2)%2?RA:RB);
+    for(const sd of [-1,1]){const e=w/2+6,pt=(q,l,y)=>[q.x+q.nx*l*sd,y,q.y+q.ny*l*sd],n=[a.nx*sd,0,a.ny*sd];
+      g.quad(pt(a,e,ha),pt(b,e,hb),pt(b,e,hb+28),pt(a,e,ha+28),[-n[0],0,-n[2]],c);
+      g.quad(pt(a,e,ha+28),pt(b,e,hb+28),pt(b,e+16,hb+28),pt(a,e+16,ha+28),up,c);
+      g.quad(pt(a,e+16,ha+28),pt(b,e+16,hb+28),pt(b,e+16,hb-16),pt(a,e+16,ha-16),n,c);}
+    const u=(q,l,y)=>[q.x+q.nx*l,y,q.y+q.ny*l],e2=w/2+22;g.quad(u(a,-e2,ha-16),u(a,e2,ha-16),u(b,e2,hb-16),u(b,-e2,hb-16),[0,-1,0],hex3(UNDER));}
+  // the tower: red and white bands, a gold cone roof and a flag on top
+  const cr=tw.r-w/2-40,top=tw.top+260,band=280;
+  for(let y=0;y<top;y+=band){const h=Math.min(band,top-y);CYL(g,tw.x,y+h/2,tw.y,cr,cr,h,Math.floor(y/band)%2?'#ffffff':'#ff4f6d',[0,0,0],40);}
+  for(let k=0;k<12;k++){const a=k/12*TAU;for(let y=420;y<top-200;y+=560)BOX(g,tw.x+Math.cos(a)*(cr+1),y+(k%2)*280,tw.y+Math.sin(a)*(cr+1),4,70,40,'#5fc8ff',[0,-a,0]);}
+  CYL(g,tw.x,top+300,tw.y,0,cr+70,600,'#ffd23f',[0,0,0],40);CYL(g,tw.x,top+12,tw.y,cr+80,cr+80,24,'#ffb627',[0,0,0],40);
+  CYL(g,tw.x,top+720,tw.y,5,5,260,'#3b2a66');BOX(g,tw.x+60,top+800,tw.y,120,70,4,'#5cf07a');SPH(g,tw.x,top+855,tw.y,12,12,12,'#ffd23f');
+  // ledges tying the slide to the tower wall
+  for(let i=0;i<TN;i+=3){const q=P[i],h=hh(T,i);if(h<40)continue;const dx=q.x-tw.x,dz=q.y-tw.y,d=Math.hypot(dx,dz);if(Math.abs(d-tw.r)>90)continue;
+    const a=Math.atan2(dz,dx),mid=(cr+d-w/2)/2;BOX(g,tw.x+Math.cos(a)*mid,h-26,tw.y+Math.sin(a)*mid,d-w/2-cr+30,20,46,'#e8e3d9',[0,-a,0]);}
+  // pillars under the rest of the raised slide
+  for(let i=0;i<TN;i+=4){const q=P[i],h=hh(T,i);if(h<60)continue;if(Math.hypot(q.x-tw.x,q.y-tw.y)<tw.r+w/2+40)continue;
+    let clear=true;for(let j=0;j<TN;j++){let dj=Math.abs(j-i);dj=Math.min(dj,TN-dj);if(dj<12)continue;const o=P[j];if(hh(T,j)<h-40&&(o.x-q.x)**2+(o.y-q.y)**2<(w/2+60)**2){clear=false;break}}
+    if(!clear)continue;CYL(g,q.x,(h-16)/2,q.y,24,30,h-16,'#e8e3d9',[0,0,0],12);CYL(g,q.x,4,q.y,46,52,10,'#9a958d',[0,0,0],14);}
 }
 function extraMeshes(){
   return {
@@ -348,12 +375,13 @@ function render3D(){
   const sh=G.shake>0?(Math.random()-.5)*10*G.shake:0;
   const port=H>W*1.05;const dist=port?175:150,hgt=port?78:66;let ex=P.x-Math.cos(yaw)*dist,ez=P.y-Math.sin(yaw)*dist;
   {const ci=nearestIdx(T,ex,ez,P.idx,30),q=T.pts[ci];const lat=(ex-q.x)*q.nx+(ez-q.y)*q.ny,lim=T.w/2-8;if(Math.abs(lat)>lim){const e=Math.abs(lat)-lim;ex-=q.nx*Math.sign(lat)*e;ez-=q.ny*Math.sign(lat)*e;}}
-  const pH=kH(T,P)+P.z*.6,eH=Math.max(T.hAt(ex,ez),pH-20),tH=T.hAt(P.x+Math.cos(yaw)*140,P.y+Math.sin(yaw)*140);
+  const lh=(x,z)=>T.tower?hh(T,nearestIdx(T,x,z,P.idx,30)):T.hAt(x,z);
+  const pH=kH(T,P)+P.z*.6,eH=Math.max(lh(ex,ez),pH-20),tH=lh(P.x+Math.cos(yaw)*140,P.y+Math.sin(yaw)*140);
   const eye=[ex+sh,hgt+eH+sh*.5,ez],tgt=[P.x+Math.cos(yaw)*140,16+Math.max(tH,pH-60),P.y+Math.sin(yaw)*140];CAM3=eye;
   const fov=((port?74:60)+(P.boost>0||P.star>0?8:0)+Math.max(0,P.speed)/P.maxS*4)*Math.PI/180;G.fov3=(G.fov3||fov)+(fov-(G.fov3||fov))*.08;
-  P3=m4persp(G.fov3,W/H,4,7000);VP3=m4mul(P3,m4look(eye,tgt,[0,1,0]));
+  const hiV=Math.max(0,pH);P3=m4persp(G.fov3,W/H,4,(T.tower?11000:7000)+hiV*1.6);VP3=m4mul(P3,m4look(eye,tgt,[0,1,0]));
   const sky=th.sky||['#5ec8ff','#e4f7ff'];
-  gl.uniformMatrix4fv(U.uVP,false,VP3);gl.uniform3fv(U.uCam,eye);gl.uniform3fv(U.uL,[.45,1,.3]);gl.uniform3fv(U.uFog,hex3(sky[1]));gl.uniform1f(U.uFN,1500);gl.uniform1f(U.uFF,4200);
+  gl.uniformMatrix4fv(U.uVP,false,VP3);gl.uniform3fv(U.uCam,eye);gl.uniform3fv(U.uL,[.45,1,.3]);gl.uniform3fv(U.uFog,hex3(sky[1]));gl.uniform1f(U.uFN,(T.tower?2600:1500)+hiV*.5);gl.uniform1f(U.uFF,(T.tower?9000:4200)+hiV*1.2);
   gl.disable(gl.BLEND);gl.depthMask(true);
   gl.uniform1f(U.uWater,1);gl.uniform1f(U.uT,G.t);drawMesh(buildWorld3D(T),I4,[1,1,1],{gl:.35});gl.uniform1f(U.uWater,0);
   const X=extraMeshes(),t=G.t;
@@ -388,7 +416,7 @@ function render3D(){
     const n=Math.max(3,Math.min(50,Math.ceil(L/11)));for(let i=1;i<n;i++){const u=i/n;drawMesh(X.sphere,m4model(lerp(m[0],tip[0],u),lerp(m[1],tip[1],u)-Math.sin(u*Math.PI)*L*.05,lerp(m[2],tip[2],u),0,7),[1,.42,.6],{gl:1.3});}
     drawMesh(X.sphere,m4model(tip[0],tip[1],tip[2],0,13),[1,.27,.5],{gl:1.6});}
   // koi carp popping up
-  for(const c of G.carp){if(c.rise<=.02)continue;const gh=T.hgt?T.hAt(c.x,c.y):0;const S=3.2,yaw=-c.a,y=gh-26+c.rise*50,pit=c.rise*.6;
+  for(const c of G.carp){if(c.rise<=.02)continue;const gh=T.hgt&&!T.tower?T.hAt(c.x,c.y):0;const S=3.2,yaw=-c.a,y=gh-26+c.rise*50,pit=c.rise*.6;
     drawMesh(X.koi[c.v],m4model(c.x,y,c.y,yaw,S,pit),[1,1,1],{gl:1.4});const tx=c.x-Math.cos(c.a)*32*S*Math.cos(pit),ty=c.y-Math.sin(c.a)*32*S*Math.cos(pit);
     drawMesh(X.koiTail[c.v],m4model(tx,y-Math.sin(pit)*32*S,ty,yaw+Math.sin(c.wag)*.35,S,pit),[1,1,1],{gl:1.2});
     if(c.mouth>.05){const mx=c.x+Math.cos(c.a)*36*S*Math.cos(pit),my=c.y+Math.sin(c.a)*36*S*Math.cos(pit);drawMesh(X.koiMouth,m4model(mx,y+Math.sin(pit)*36*S,my,yaw,(.4+c.mouth*.8)*S,pit),[1,1,1],{gl:.8});}}
@@ -401,7 +429,7 @@ function render3D(){
   for(const sp of T.spinners){const a=sp.ph+sp.spd*G.t,ux=Math.cos(a),uy=Math.sin(a),bh=hh(T,sp.i)+34;
     for(let j=1;j<=14;j++){const f=j/14,d=f*sp.len,fl=Math.sin(t*25+j*1.7)*2;drawMesh(X.sphere,m4model(sp.x+ux*d,bh+Math.sin(f*Math.PI)*28-f*22+fl,sp.y+uy*d,0,5+f*5),[.78,.94,1],{a:.55-.2*f,gl:1.4,em:[.1,.15,.2]});}
     for(let j=0;j<6;j++){const f=.9+((t*1.3+j*.17)%1)*.3,d=f*sp.len,b2=a-sp.spd*.08*j;drawMesh(X.sphere,m4model(sp.x+Math.cos(b2)*d,bh-25*((t*1.3+j*.17)%1)+4,sp.y+Math.sin(b2)*d,0,3),[.85,.97,1],{a:.5,gl:1});}}
-  for(const c of G.carp){if(c.rise>.02)continue;const gh=T.hgt?T.hAt(c.x,c.y):0;drawMesh(X.koi[c.v],m4model(c.x,gh-28,c.y,-c.a,3.2,0),[.75,.92,1],{a:.75,gl:.3});
+  for(const c of G.carp){if(c.rise>.02)continue;const gh=T.hgt&&!T.tower?T.hAt(c.x,c.y):0;drawMesh(X.koi[c.v],m4model(c.x,gh-28,c.y,-c.a,3.2,0),[.75,.92,1],{a:.75,gl:.3});
     drawMesh(X.koiTail[c.v],m4model(c.x-Math.cos(c.a)*102,gh-28,c.y-Math.sin(c.a)*102,-c.a+Math.sin(c.wag)*.4,3.2,0),[.75,.92,1],{a:.75,gl:.3});}
   for(const f of G.fire){if(!f.spray)continue;const dc=Math.hypot(f.x-CAM3[0],f.h-CAM3[1],f.y-CAM3[2]);const fade=clamp((dc-110)/130,0,1);if(fade<=0)continue;const a=clamp(f.life/f.max,0,1);drawMesh(X.sphere,m4model(f.x,f.h,f.y,0,f.s*(1.3-a*.5)),[.9,.98,1],{a:.55*a*fade,gl:.6,em:[.15,.18,.2]});}
   for(const f of G.fire){if(!f.smoke)continue;const dcs=Math.hypot(f.x-CAM3[0],f.h-CAM3[1],f.y-CAM3[2]);if(dcs<120)continue;const a=f.life/f.max*clamp((dcs-120)/120,0,1);drawMesh(X.sphere,m4model(f.x,f.h,f.y,0,f.s),[.35,.33,.38],{a:.35*a,gl:0});}

@@ -1,6 +1,6 @@
 # 🐸 Ribbit Rally
 
-A bright, bouncy kids' racing game: eight frogs on jetskis race around **82 pond courses** across 4 levels, grabbing **? boxes** for items like the Bubble Blaster, Buzzy Fly and Sticky Tongue, while dodging sprinklers, buzzing insects, bird poo and giant koi carp that gulp racers and spit them into the air.
+A bright, bouncy kids' racing game: eight frogs on jetskis race around **83 pond courses** across 4 levels, grabbing **? boxes** for items like the Bubble Blaster, Buzzy Fly and Sticky Tongue, while dodging sprinklers, buzzing insects, bird poo and giant koi carp that gulp racers and spit them into the air.
 
 ![A race in Ribbit Rally](docs/screenshots/race.png)
 
@@ -14,7 +14,7 @@ A bright, bouncy kids' racing game: eight frogs on jetskis race around **82 pond
 ## What's in the game
 
 - **8 frogs**, each with their own stats, a hat or accessory, a voice line and a funny blink: Zippy, Lulu, Bonk, Pip, Mango, Douglas Moleseed, Fern and Rocket
-- **4 levels:** gentle Level 1, sharp-turning Level 2, hairpin-crazy Level 3, and Level 4's rolling waves, boost pads and S-bends (including *Doodle Dash*, drawn from a sketch)
+- **4 levels:** gentle Level 1, sharp-turning Level 2, hairpin-crazy Level 3, and Level 4's rolling waves, boost pads and S-bends (including *Doodle Dash* and *Tower Twister*, both drawn from sketches. Tower Twister has a corkscrew water-slide tower and a giant drop)
 - A Mario Kart-style countdown with revving jet engines, exhaust flames, flying frogs and wheelie starts
 - A jet engine that never stops, with 3 gears, a turbo whistle, dump-valve "pssh" and AMG-style crackles and pops
 - A speedometer and gear display, a minimap, lap counter and pumping race music (all made in code, so no copyrighted music)
@@ -66,7 +66,7 @@ src/
   preload/index.js     tiny bridge that tells the page it's the desktop app
   renderer/
     index.html         menus, HUD styles and page layout
-    game/tracks.js     the 82 tracks and the track builder
+    game/tracks.js     the 83 tracks and the track builder
     game/render3d.js   the custom WebGL 3D renderer (frogs, jetskis, pond, carp...)
     game/music.js      the music sequencer (all synthesised, no audio files)
     game/game.js       the game: physics, AI rivals, items, sounds, voices, HUD, menus
