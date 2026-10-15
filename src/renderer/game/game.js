@@ -357,7 +357,7 @@ const FROG_VOICES=[
 const FROG_LINES=[
   {line:'Zoom zoom! Catch me if you can!',pitch:1.15,rate:1.1,f0:150,fm:[[900,3,1.2],[1900,4,.7]]},
   {line:"I loike my coffee whoite, no sugar... I'm sweet enough, darl!",say:"I loike my coffee whoite, no sugar... I'm sweet enough, darl!",pitch:1.45,rate:1.05,f0:260,fm:[[1300,3,1.1],[2600,4,.6]]},
-  {line:'Uhhh... okaaay... which way is forwards? I might need a poo... before the race.',say:'Uhhh... okay... which way is... forwards? I might need a poo... before the race.',pitch:.1,rate:.68,f0:62,fm:[[330,2.5,1.6],[780,3,1]]},
+  {line:'Uhhh... okaaay... which way is forwards? I might need a poo... before the race.',say:'Uhhh okay which way is forwards? I might need a poo before the race.',pitch:.1,rate:.68,f0:62,fm:[[330,2.5,1.6],[780,3,1]]},
   {line:"I'm Pippa! I'm a beat ya, wizz round ya like a potataaaa!",say:"I'm Pippa! I'm a beat ya, whizz round ya like a potatahhh!",pitch:1.75,rate:1.15,f0:320,fm:[[1800,3,1.1],[3200,4,.5]]},
   {line:'Which loser is gonna hit the barrier first? My shades are HARD!',say:'Which loser is gonna hit the barrier first? My shades are hard!',pitch:.45,rate:.9,f0:95,fm:[[600,2.5,1.4],[1250,3,.8]]},
   {line:'Engines ready. Snacks ready. Let\'s go!',pitch:.8,rate:1,f0:130,fm:[[800,3,1.2],[1700,4,.7]]},
@@ -524,11 +524,11 @@ function frogVoice(i){audio();const dopey=!!FROGS[i].dopey,posh=!dopey&&!!FROGS[
   let done=false;const croakBack=()=>{if(done||id!==SAYID)return;done=true;throatStop();setDuck(1);bonkCroak(AC.currentTime+.02);mouthSay('ribbit... ribbit',1.3);clearTimeout(SPK.t);SPK.t=setTimeout(()=>{if(SPK.i===i)SPK.i=-1},1500)};
   try{const ss=window.speechSynthesis;if(!ss||!window.SpeechSynthesisUtterance){croakBack();return}
     ss.cancel();throatStop();setDuck(.3);
-    const text=L.say||L.line,parts=(text.match(posh?/[^.!?,]+[.!?,]*\s*/g:/[^.!?]+[.!?]*\s*/g)||[text]).filter(x=>x.trim()),n=parts.length;
+    const text=L.say||L.line,parts=dopey?[text]:(text.match(posh?/[^.!?,]+[.!?,]*\s*/g:/[^.!?]+[.!?]*\s*/g)||[text]).filter(x=>x.trim()),n=parts.length;
     FV=FV||pickVoice();if(posh)PV=PV||pickPoshVoice();const VV=posh&&PV?PV:FV;let started=false,bounds=0,tick=null,left=n;
     const finish=()=>{clearInterval(tick);if(id!==SAYID)return;SPK.i=-1;FACE[i].smileT=1;FACE[i].nextSmile=performance.now()+1600;throatStop();setDuck(1);};
     parts.forEach((ph,k)=>{const u=new SpeechSynthesisUtterance(ph.trim());
-      u.pitch=dopey?Math.max(0,L.pitch+(k===n-1?-.06:k%2?.02:.09)):posh?Math.min(2,L.pitch+.14*k+(/[,?]\s*$/.test(ph)?.1:0)):Math.min(2,L.pitch+(n>1?.32*k/(n-1):.15)+(/!\s*$/.test(ph)?.1:0));u.rate=dopey?L.rate:posh?L.rate*(k===n-1?1.05:1):Math.min(2,L.rate*(1+.06*k));u.volume=1;
+      u.pitch=dopey?(n===1?L.pitch:Math.max(0,L.pitch+(k===n-1?-.06:k%2?.02:.09))):posh?Math.min(2,L.pitch+.14*k+(/[,?]\s*$/.test(ph)?.1:0)):Math.min(2,L.pitch+(n>1?.32*k/(n-1):.15)+(/!\s*$/.test(ph)?.1:0));u.rate=dopey?L.rate:posh?L.rate*(k===n-1?1.05:1):Math.min(2,L.rate*(1+.06*k));u.volume=1;
       if(VV){u.voice=VV;u.lang=VV.lang}else u.lang=posh?'en-AU':'en-GB';
       u.onstart=()=>{if(id!==SAYID)return;if(!started){started=true;done=true;throatStart(L);
           // if this voice doesn't report words, pulse the throat on a quick steady beat instead
