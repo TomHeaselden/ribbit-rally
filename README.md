@@ -1,6 +1,6 @@
 # 🐸 Ribbit Rally
 
-A bright, bouncy kids' racing game: eight frogs on jetskis race around **83 pond courses** across 4 levels, grabbing **? boxes** for items like the Bubble Blaster, Buzzy Fly and Sticky Tongue, while dodging sprinklers, buzzing insects, bird poo and giant koi carp that gulp racers and spit them into the air.
+A bright, bouncy kids' racing game: eight frogs on jetskis race around **81 pond courses** across 4 levels, grabbing **? boxes** for items like the Bubble Blaster, Buzzy Fly and Sticky Tongue, while dodging sprinklers, buzzing insects, bird poo and giant koi carp that gulp racers and spit them into the air.
 
 ![A race in Ribbit Rally](docs/screenshots/race.png)
 
@@ -66,7 +66,7 @@ src/
   preload/index.js     tiny bridge that tells the page it's the desktop app
   renderer/
     index.html         menus, HUD styles and page layout
-    game/tracks.js     the 83 tracks and the track builder
+    game/tracks.js     the 81 tracks and the track builder
     game/render3d.js   the custom WebGL 3D renderer (frogs, jetskis, pond, carp...)
     game/music.js      the music sequencer (all synthesised, no audio files)
     game/game.js       the game: physics, AI rivals, items, sounds, voices, HUD, menus

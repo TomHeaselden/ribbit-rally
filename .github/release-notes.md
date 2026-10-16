@@ -1,6 +1,6 @@
 ## 🐸 Ribbit Rally {{VERSION}}
 
-Eight hoppy frogs on jetskis, 83 pond courses across 4 levels, power-ups, koi carp and a lot of ribbits.
+Eight hoppy frogs on jetskis, 81 pond courses across 4 levels, power-ups, koi carp and a lot of ribbits.
 
 ### Which file do I download?
 

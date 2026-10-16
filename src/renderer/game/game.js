@@ -683,8 +683,10 @@ addEventListener('resize',resize);resize();
 let G=null; // current race
 const opts={laps:3,diff:1,autoGas:true,frog:0,track:0,music:true,revStyle:'jet'};
 try{const s=JSON.parse(store('rr-opts')||'{}');Object.assign(opts,s);if(!s.revPicked)opts.revStyle='jet';}catch(e){}
+// the chosen track is remembered by name too, so removing or adding tracks never points the save at the wrong one (or past the end of the list)
+{const j=opts.trackN?TRACKS.findIndex(d=>d.n===opts.trackN):-1;if(j>=0)opts.track=j;if(!(opts.track>=0&&opts.track<TRACKS.length))opts.track=0;}
 sound=opts.sound!==false;MUS.on=opts.music!==false;
-function saveOpts(){opts.sound=sound;store('rr-opts',JSON.stringify(opts))}
+function saveOpts(){opts.sound=sound;opts.trackN=TRACKS[opts.track]&&TRACKS[opts.track].n;store('rr-opts',JSON.stringify(opts))}
 const trackCache={};
 function getTrack(i){
   if(trackCache[i])return trackCache[i];

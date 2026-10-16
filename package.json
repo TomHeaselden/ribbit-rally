@@ -2,7 +2,7 @@
   "name": "ribbit-rally",
   "productName": "Ribbit Rally",
   "version": "0.0.1",
-  "description": "A frog jetski racing game: 83 pond courses, 8 frogs, power-ups, koi carp and plenty of ribbits.",
+  "description": "A frog jetski racing game: 81 pond courses, 8 frogs, power-ups, koi carp and plenty of ribbits.",
   "main": "./out/main/index.js",
   "private": true,
   "author": "TomHeaselden",
