@@ -636,7 +636,7 @@ function engineRpmTarget(P){
   if(G.state==='count')return .12+(P.rev||0)*.6;
   if(P.ko>0||P.gulped)return .1;
   const sf=Math.min(Math.abs(P.speed)/P.maxS,1.7),g=Math.max(0,G.gear||0);
-  const r=Math.max(.14,gearRpm(g,sf))-(P._gas?0:.08)+(P.boost>0||P.star>0?.08:0)+(P.z>10?.3:0)+(P.spin>0?.15:0);
+  const r=Math.max(.14,gearRpm(g,sf))-(P._gas?0:.08)+(P.boost>0||P.star>0?.08:0)+(P.z>10||P.sz>6?.3:0)+(P.spin>0?.15:0);
   return clamp(r,.1,1.5);}
 function engineTick(dt){const n=ENG.n;if(!n||!AC||!G)return;const P=G.player,t=AC.currentTime,tc=.04;
   ENG.shiftT=Math.max(0,(ENG.shiftT||0)-dt);
@@ -705,6 +705,7 @@ function getTrack(i){
   if(trackCache[i])return trackCache[i];
   const T=buildTrack(TRACKS[i]);T.th=THEMES[TRACKS[i].t];T.idx=i;
   const p=new Path2D();T.pts.forEach((q,j)=>j?p.lineTo(q.x,q.y):p.moveTo(q.x,q.y));p.closePath();T.path=p;
+  T.cum=[0];for(let j=1;j<=TN;j++){const a=T.pts[j-1],b=T.pts[j%TN];T.cum.push(T.cum[j-1]+Math.hypot(b.x-a.x,b.y-a.y));}   // distance along the course at each point
   // difficulty
   const wig=T.wiggle;T.stars=wig<45?1:wig<60?2:3;
   // item box rows
@@ -747,6 +748,23 @@ function getTrack(i){
   return trackCache[i]=T;
 }
 
+// ---- swells: a gentle current rolls little humps of water down the course. Ride over them and,
+// going fast, the water drops away under you and you get a little hop of air. ----
+const SW_HW=80,SW_V=60;   // half the length of a swell, and how fast the current carries them along
+function makeSwells(T){const L=T.cum[TN],n=Math.max(4,Math.round(L/1600)),r=mulberry(T.idx*41+7),out=[];
+  for(let i=0;i<n;i++)out.push({s0:(i+.5+(r()-.5)*.5)/n*L,A:3+(r()**2)*5.5,ph:r()*TAU,s:0,a:0});return out}
+function updateSwells(){const T=G.T,L=T.cum[TN];for(const w of G.swells){w.s=((w.s0+SW_V*G.t)%L+L)%L;const ds=Math.min(w.s,L-w.s);
+  let a=w.A*(.8+.2*Math.sin(G.t*.5+w.ph))*clamp((ds-350)/400,0,1);   // calm water round the start line
+  if(T.hgt){const i=Math.floor(w.s/L*TN)%TN;if(T.tower)a*=clamp(1-hh(T,i)/5,0,1);}   // none up on the tower slide
+  w.a=a;}}
+// how far along the course a racer is (smooth across track points, so the swell height never jumps)
+function trackS(T,k){const i=k.idx,q=T.pts[i];let t=segT(q,T.pts[(i+1)%TN],k.x,k.y);if(t>=0)return T.cum[i]+Math.min(1,t)*(T.cum[i+1]-T.cum[i]);
+  const j=(i-1+TN)%TN;t=segT(T.pts[j],q,k.x,k.y);if(t>=0)return T.cum[j]+Math.min(1,t)*(T.cum[j+1]-T.cum[j]);return T.cum[i]}
+let SWD=0;   // slope of the water at the last swellAt() call
+function swellAt(T,s){let h=0;SWD=0;if(!G||!G.swells)return 0;const L=T.cum[TN];for(const w of G.swells){if(w.a<=0)continue;let d=s-w.s;d-=Math.round(d/L)*L;
+  if(d>-SW_HW&&d<SW_HW){const u=Math.PI*d/SW_HW;h+=w.a*.5*(1+Math.cos(u));SWD-=w.a*.5*Math.PI/SW_HW*Math.sin(u);}}return h}
+// height of a racer for drawing: the track, plus any jump, plus the swell they're riding
+function kZ(T,k){return kH(T,k)+k.z+(k.sw||0)}
 // on tower tracks (which cross over themselves) things only touch racers at the same height
 function sameLvl(k,i){const T=G.T;return !T.tower||i==null||Math.abs(kH(T,k)+k.z-hh(T,i))<90}
 function nearestIdx(T,x,y,guess,span=24){let best=guess,bd=1e18;for(let k=-span;k<=span;k++){const i=(guess+k+TN)%TN;const p=T.pts[i];const d=(p.x-x)**2+(p.y-y)**2;if(d<bd){bd=d;best=i}}return best}
@@ -768,7 +786,7 @@ function newRace(){
       
       z:0,vz:0,slope:0,ai:{off:(Math.random()-.5)*.5,offT:0,useAt:0,skill:.9+Math.random()*.15}};
   });
-  G={T,karts,player:karts.find(k=>k.pi===0),players:humans.map(fi=>karts.find(k=>k.fi===fi)),proj:[],haz:[],birds:[],poos:[],puddles:[],birdT:8+Math.random()*4,parts:[],texts:[],fire:[],flyers:[],carp:makeCarp(T),revT:.5,popAt:0,flyT:.2,state:'count',t:0,cd:6.4,raceT:0,laps:opts.laps,cam:{x:0,y:0,z:1},finishOrder:[],endT:0,paused:false,shake:0};
+  G={T,karts,swells:makeSwells(T),player:karts.find(k=>k.pi===0),players:humans.map(fi=>karts.find(k=>k.fi===fi)),proj:[],haz:[],birds:[],poos:[],puddles:[],birdT:8+Math.random()*4,parts:[],texts:[],fire:[],flyers:[],carp:makeCarp(T),revT:.5,popAt:0,flyT:.2,state:'count',t:0,cd:6.4,raceT:0,laps:opts.laps,cam:{x:0,y:0,z:1},finishOrder:[],endT:0,paused:false,shake:0};
   G.cam.x=G.player.x;G.cam.y=G.player.y;G.camYaw=G.player.a;G.camOrbit=Math.PI;
   if(GL3.ok){buildWorld3D(T);const sk=T.th.sky;GL3.cvs.style.background=`linear-gradient(180deg,${sk[0]} 0%,${sk[1]} 62%,${sk[1]} 100%)`;}
   if(two){for(const p of G.players)p.vs={cam:{x:p.x,y:p.y,z:1},camYaw:p.a,camOrbit:Math.PI,shake:0,banner:null,eng:{n:null,rpm:.12,pan:p.pi?.4:-.4,vol:.8}};
@@ -854,7 +872,7 @@ function popText(x,y,s,c){G.texts.push({x,y,s,c,life:.8,max:.8})}
 
 // ================= update =================
 function update(dt){
-  const T=G.T;G.t+=dt;
+  const T=G.T;G.t+=dt;updateSwells();
   forViews(()=>{gearTick(dt);engineTick(dt);speedoTick(dt);});
   if(G.state==='count'){G.cd-=dt;const prev=Math.ceil(G.cd+dt-1.2),now=Math.ceil(G.cd-1.2);if(now!==prev&&now>=0&&now<=3){if(now>0)beep(440,.25,'square',.08);else beep(880,.5,'square',.09);}
     preRaceFX(dt);
@@ -932,7 +950,7 @@ function update(dt){
 // ---- pre-race show: revving engines, exhaust fire pops and flying frogs ----
 function wheelieAngle(k){if(k.wheelie===undefined||k.spin>0||k.gulped)return 0;const e=k.wheelie-(k.wheelieDelay||0);if(e<=0||e>=1.6)return 0;
   if(e<.2)return .62*(e/.2);if(e<.7)return .62+Math.sin((e-.2)*12)*.03;if(e<1.35)return .62*Math.pow(1-(e-.7)/.65,2);return Math.sin((e-1.35)*25)*.05*(1.6-e)/.25;}
-function exhaustPos(k,side){const T=G.T,c=Math.cos(k.a),s=Math.sin(k.a);const g=T.hgt?kH(T,k):0;return {x:k.x-c*33-s*side*7,y:k.y-s*33+c*side*7,h:g+k.z+11};}
+function exhaustPos(k,side){const T=G.T,c=Math.cos(k.a),s=Math.sin(k.a);const g=(T.hgt?kH(T,k):0)+(k.sw||0);return {x:k.x-c*33-s*side*7,y:k.y-s*33+c*side*7,h:g+k.z+11};}
 function exhaustBurst(k,n,power=1){const c=Math.cos(k.a),s=Math.sin(k.a);for(const side of [-1,1]){const e=exhaustPos(k,side);for(let i=0;i<n;i++){const sp=(90+Math.random()*160)*power;
   G.fire.push({x:e.x,y:e.y,h:e.h,vx:-c*sp+(Math.random()-.5)*50,vy:-s*sp+(Math.random()-.5)*50,vh:20+Math.random()*60,life:.28+Math.random()*.22*power,max:.5*power,s:(4+Math.random()*4)*power,smoke:false});}
   G.fire.push({x:e.x,y:e.y,h:e.h,vx:-c*60,vy:-s*60,vh:40,life:.9,max:.9,s:6*power,smoke:true});}}
@@ -989,7 +1007,7 @@ function updateFX(dt){
   for(const k of G.karts){k.rev=Math.max(0,(k.rev||0)-dt*2.2);if(k.wheelie!==undefined&&k.wheelie<2)k.wheelie+=dt;}
   // jetski spray: a rooster tail from the back and splashes off the sides
   const T=G.T;for(const k of G.karts){if(k.ko>0||G.fire.length>520)continue;const sp=Math.abs(k.speed);if(sp<90)continue;const dp=pDist(k.x,k.y);if(dp>1800)continue;
-    const c=Math.cos(k.a),s=Math.sin(k.a),g=(T.hgt?kH(T,k):0)+k.z;const wl=wheelieAngle(k)>.2?3:1;const n=dt*sp/(k.isP?45:70)*wl;for(let m=0;m<n+Math.random()-.5;m++){
+    if(k.sz>3)continue;const c=Math.cos(k.a),s=Math.sin(k.a),g=(T.hgt?kH(T,k):0)+k.z+(k.sw||0);const wl=wheelieAngle(k)>.2?3:1;const n=dt*sp/(k.isP?45:70)*wl;for(let m=0;m<n+Math.random()-.5;m++){
       G.fire.push({spray:true,x:k.x-c*38+(Math.random()-.5)*8,y:k.y-s*38+(Math.random()-.5)*8,h:g+6,vx:c*sp*.62+(Math.random()-.5)*60,vy:s*sp*.62+(Math.random()-.5)*60,vh:120+sp*.2+Math.random()*60,life:.3+Math.random()*.15,max:.45,s:2.2+Math.random()*1.8});
       if(Math.random()<.25){const sd=Math.random()<.5?-1:1;G.fire.push({spray:true,x:k.x+c*8-s*sd*14,y:k.y+s*8+c*sd*14,h:g+4,vx:-s*sd*90-c*sp*.1,vy:c*sd*90-s*sp*.1,vh:70+Math.random()*50,life:.35,max:.45,s:3+Math.random()*2});}}}
   for(let i=G.fire.length-1;i>=0;i--){const f=G.fire[i];f.life-=dt;if(f.life<=0){G.fire.splice(i,1);continue}f.x+=f.vx*dt;f.y+=f.vy*dt;f.h+=f.vh*dt;
@@ -1075,6 +1093,15 @@ function stepKart(k,dt){
   if(!T.hgt&&(k.z>0||k.vz>0)){k.vz-=1100*dt;k.z+=k.vz*dt;if(k.z<=0){if(k.vz<-300){splashAt(k.x,k.y,18,1.1);if(k.isP){splatSound(.9);shk(k,.3)}}k.z=0;k.vz=0;}}
   // progress
   const ni=nearestIdx(T,k.x,k.y,k.idx);let dl=ni-k.idx;if(dl<-TN/2)dl+=TN;if(dl>TN/2)dl-=TN;k.prog+=dl;k.idx=ni;
+  // swells: follow the rolling water, but when it drops away faster than you fall (fast over a crest) you get a little air
+  {const sw=swellAt(T,trackS(T,k)),sl=SWD,sv=k._sw0===undefined?0:clamp((sw-k._sw0)/dt,-1500,1500);k._sw0=sw;k.swG=sw;k.swSl=sl;
+   if(k.air||k.z>0||k.gulped||k.ko>0){k.sAir=false;k.sw=sw;k._svp=undefined;}
+   else if(k.sAir){k.svy-=1150*dt;k.sy+=k.svy*dt;
+     if(k.sy<=sw){k.sAir=false;const hit=k.svy-sv;k.sw=sw;k._svp=sv;if(hit<-150){splashAt(k.x,k.y,7,.7);if(k.isP&&hit<-230)splatSound(.3);}}else k.sw=k.sy;}
+   else{const acc=k._svp===undefined?0:(sv-k._svp)/dt;
+     if(acc<-1150*1.15&&k.speed>300&&G.state!=='count'){k.sAir=true;k.svy=k._svp;k.sy=sw;k.sw=sw;k._svp=undefined;splashAt(k.x,k.y,5,.6);if(k.isP&&k.svy>170)G.texts.push({x:k.x,y:k.y-40,s:'AIR!',c:'#7ef3ff',life:.6,max:.6});}
+     else{k.sw=sw;k._svp=sv;}}
+   k.sz=k.sw-sw;}
   // hills: follow the ground, but fly off steep crests when going fast, and arc through the air after a jump pad
   if(T.hgt){const gnd=kH(T,k);const gv=k._g0===undefined?0:clamp((gnd-k._g0)/dt,-2500,2500);k._g0=gnd;
     if(k.air){k.avy-=1150*dt;k.ay+=k.avy*dt;if(k.ay<=gnd){const hit=k.avy-gv;k.air=false;k.z=0;k.vz=0;if(hit<-260){burst(k.x,k.y,'#ffffff',10);splashAt(k.x,k.y,14,1);if(k.isP){beep(90,.15,'sine',.12,-30);shk(k,clamp(-hit/1600,.15,.45))}}}else{k.z=k.ay-gnd;k.vz=k.avy-gv;}}
@@ -1204,6 +1231,8 @@ function render2D(){
     c.strokeStyle='rgba(255,255,255,.12)';c.lineWidth=T.w*.7;c.stroke(T.path);}
   else{c.strokeStyle='rgba(255,255,255,.13)';c.lineWidth=T.w*.62;c.stroke(T.path);c.strokeStyle='rgba(255,255,255,.1)';c.lineWidth=T.w*.3;c.stroke(T.path);
     c.setLineDash([30,50]);c.strokeStyle='rgba(255,255,255,.55)';c.lineWidth=7;c.stroke(T.path);c.setLineDash([]);}
+  // swells drifting down the course
+  for(const w of G.swells){if(w.a<1)continue;const f=w.s/T.cum[TN]*TN,i=Math.floor(f)%TN,q=T.pts[i];c.strokeStyle=`rgba(255,255,255,${.25+w.a*.04})`;c.lineWidth=8+w.a*1.5;c.beginPath();c.moveTo(q.x-q.nx*T.w/2,q.y-q.ny*T.w/2);c.lineTo(q.x+q.nx*T.w/2,q.y+q.ny*T.w/2);c.stroke();}
   // start line
   const s0=T.pts[0];c.save();c.translate(s0.x,s0.y);c.rotate(s0.a);
   const sq=18,nC=Math.ceil(T.w/sq);for(let i=0;i<nC;i++)for(let j=0;j<3;j++){c.fillStyle=(i+j)%2?'#111':'#fff';c.fillRect(-sq*1.5+j*sq,-T.w/2+i*sq,sq,Math.min(sq,T.w/2-(-T.w/2+i*sq)));}

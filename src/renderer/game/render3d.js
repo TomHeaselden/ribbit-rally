@@ -340,6 +340,10 @@ function extraMeshes(){
   return {
     box:getMesh('box',()=>{const g=new Geo();BOX(g,0,0,0,1,1,1,'#ffffff');BOX(g,0,0,0,.84,1.04,.84,'#ffffff');return g}),
     sphere:getMesh('sph',()=>{const g=new Geo();gSphere(g,mkXf(),'#ffffff',18,12);return g}),
+    // a swell: a low hump of water across the course (unit height and width; stretched when drawn), with a foamy crest
+    swell:getMesh('swell',()=>{const g=new Geo(),N=18,y=x=>.5*(1+Math.cos(Math.PI*x/SW_HW)),col=v=>hex3(v>.93?'#eefbff':v>.7?'#74d4f2':v>.35?'#4fc2ea':'#2fb2df');
+      for(let i=0;i<N;i++){const x0=-SW_HW+2*SW_HW*i/N,x1=x0+2*SW_HW/N,y0=y(x0),y1=y(x1),nx=-(y1-y0)/(x1-x0)*6,nl=Math.hypot(nx,1),n=[nx/nl,1/nl,0],c=col((y0+y1)/2);
+        g.quad([x0,y0,-.5],[x0,y0,.5],[x1,y1,.5],[x1,y1,-.5],n,c);for(const sd of [-.5,.5]){const cn=[0,0,sd*2],cc=hex3('#4cc3ea');g.tri([x0,0,sd],[x0,y0,sd],[x1,y1,sd],cn,cn,cn,cc);g.tri([x0,0,sd],[x1,y1,sd],[x1,0,sd],cn,cn,cn,cc);}}return g}),
     lily:getMesh('lily',()=>{const g=new Geo();CYL(g,0,2,0,22,22,2,'#5fd36a',[0,0,0],16);CYL(g,0,3.2,0,15,15,.6,'#8af08a',[0,0,0],14);SPH(g,-6,6,-6,5,4,5,'#ff9fd0');return g}),
     fly:getMesh('fly',()=>{const g=new Geo();SPH(g,0,0,0,10,7,7,'#2b2140');SPH(g,8,2,4,3.5,3.5,3.5,'#ff4b5c');SPH(g,8,2,-4,3.5,3.5,3.5,'#ff4b5c');BOX(g,-2,7,8,12,1,9,'#e8f8ff',[.4,0,0]);BOX(g,-2,7,-8,12,1,9,'#e8f8ff',[-.4,0,0]);return g}),
     bird:[0,1,2].map(c=>getMesh('bird'+c,()=>{const g=new Geo();const body=['#f2f2ee','#9aa1ad','#e9e6df'][c],head=['#f7f7f4','#7c8794','#f2f0ea'][c],beak=['#f2c230','#3b3b40','#e8b23a'][c];
@@ -406,7 +410,7 @@ function render3D(vp){
   const port=H>W*1.05;const dist=port?175:150,hgt=port?78:66;let ex=P.x-Math.cos(yaw)*dist,ez=P.y-Math.sin(yaw)*dist;
   {const ci=nearestIdx(T,ex,ez,P.idx,30),q=T.pts[ci];const lat=(ex-q.x)*q.nx+(ez-q.y)*q.ny,lim=T.w/2-8;if(Math.abs(lat)>lim){const e=Math.abs(lat)-lim;ex-=q.nx*Math.sign(lat)*e;ez-=q.ny*Math.sign(lat)*e;}}
   const lh=(x,z)=>T.tower?hNear(T,x,z,P.idx):T.hAt(x,z);
-  let pH=kH(T,P)+P.z*.6,eH=Math.max(lh(ex,ez),pH-20),tH=lh(P.x+Math.cos(yaw)*140,P.y+Math.sin(yaw)*140);
+  let pH=kH(T,P)+P.z*.6+(P.sw||0)*.5,eH=Math.max(lh(ex,ez),pH-20),tH=lh(P.x+Math.cos(yaw)*140,P.y+Math.sin(yaw)*140);
   if(T.tower){const sm=(key,v)=>G[key]=G[key]==null||Math.abs(G[key]-v)>400?v:G[key]+(v-G[key])*.3;eH=sm('_cEH',eH);tH=sm('_cTH',tH);}
   const eye=[ex+sh,hgt+eH+sh*.5,ez],tgt=[P.x+Math.cos(yaw)*140,16+Math.max(tH,pH-60),P.y+Math.sin(yaw)*140];CAM3=eye;
   const fov=((port?74:60)+(P.boost>0||P.star>0?8:0)+Math.max(0,P.speed)/P.maxS*4)*Math.PI/180;G.fov3=(G.fov3||fov)+(fov-(G.fov3||fov))*.08;
@@ -434,15 +438,15 @@ function render3D(vp){
     const hop=k.hop>0?Math.sin(k.hop/.35*Math.PI)*14:(k.ko>0?Math.abs(Math.sin(k.ko*6))*12:0);
     const roll=(k.dizzy>0?Math.sin(t*10)*.12:0)+(k.flip>0?(1-k.flip/1.25)*TAU*2:0);
     const tint=k.star>0?hsl2rgb((t*1.2)%1,.9,.7):[1,1,1];const em=k.hurt>0?[k.hurt*1.6,0,k.hurt*.4]:k.star>0?[.15,.15,.15]:[0,0,0];
-    const pt0=T.hgt&&k.spin<=0&&k.ko<=0?Math.atan(k.slope)+(k.z>0?clamp(k.vz/1500,-.25,.25):0):0;k._pt=k._pt==null?pt0:k._pt+(pt0-k._pt)*.25;const pitch=k._pt;   // eased so the nose doesn't twitch
+    const pt0=k.spin<=0&&k.ko<=0?(T.hgt?Math.atan(k.slope)+(k.z>0?clamp(k.vz/1500,-.25,.25):0):0)+(k.sAir?clamp(k.svy/1200,-.22,.22):Math.atan((k.swSl||0)*.8)):0;k._pt=k._pt==null?pt0:k._pt+(pt0-k._pt)*.25;const pitch=k._pt;   // eased so the nose doesn't twitch
     const rv=k.rev||0;const vib=rv>0?(Math.random()-.5)*1.6*rv:0;
     const bob=Math.sin(t*3.2+k.id*1.7)*1.6,plane=clamp(k.speed/k.maxS,0,1.2)*.07,wh=wheelieAngle(k);
     // wheelie pivots on the back of the hull so the tail stays in the water
     const wx=k.x-Math.cos(k.a)*30*(1-Math.cos(wh)),wy=k.y-Math.sin(k.a)*30*(1-Math.cos(wh));
-    drawMesh(kartMesh(k.fi),m4model(wx,hop+kH(T,k)+k.z+vib+bob+Math.sin(wh)*30,wy,-k.a,1,roll+pitch+rv*.07+plane+wh+Math.sin(t*2.3+k.id)*.02),tint,{gl:1.1,em});}
+    drawMesh(kartMesh(k.fi),m4model(wx,hop+kZ(T,k)+vib+bob+Math.sin(wh)*30,wy,-k.a,1,roll+pitch+rv*.07+plane+wh+Math.sin(t*2.3+k.id)*.02),tint,{gl:1.1,em});}
   // sticky tongues
-  for(const k of G.karts){const tg=k.tng;if(!tg||k.gulped)continue;const ca=Math.cos(k.a),sa=Math.sin(k.a);const g0=kH(T,k)+k.z;const m=[k.x+ca*16,g0+31,k.y+sa*16];
-    let e;if(tg.tgt){const o=tg.tgt,oa=Math.cos(o.a),ob=Math.sin(o.a);e=[o.x-oa*22,kH(T,o)+o.z+22,o.y-ob*22];}else e=[m[0]+ca*480,m[1]-10,m[2]+sa*480];
+  for(const k of G.karts){const tg=k.tng;if(!tg||k.gulped)continue;const ca=Math.cos(k.a),sa=Math.sin(k.a);const g0=kZ(T,k);const m=[k.x+ca*16,g0+31,k.y+sa*16];
+    let e;if(tg.tgt){const o=tg.tgt,oa=Math.cos(o.a),ob=Math.sin(o.a);e=[o.x-oa*22,kZ(T,o)+22,o.y-ob*22];}else e=[m[0]+ca*480,m[1]-10,m[2]+sa*480];
     const f=tg.phase==='out'?clamp(tg.t/tg.out,0,1):1-clamp(tg.t/.22,0,1);const tip=[lerp(m[0],e[0],f),lerp(m[1],e[1],f),lerp(m[2],e[2],f)];const L=Math.hypot(tip[0]-m[0],tip[1]-m[1],tip[2]-m[2]);
     const n=Math.max(3,Math.min(50,Math.ceil(L/11)));for(let i=1;i<n;i++){const u=i/n;drawMesh(X.sphere,m4model(lerp(m[0],tip[0],u),lerp(m[1],tip[1],u)-Math.sin(u*Math.PI)*L*.05,lerp(m[2],tip[2],u),0,7),[1,.42,.6],{gl:1.3});}
     drawMesh(X.sphere,m4model(tip[0],tip[1],tip[2],0,13),[1,.27,.5],{gl:1.6});}
@@ -456,7 +460,7 @@ function render3D(vp){
     drawMesh(X.flyer[f.fi],m4model(f.x,h,f.y,yaw,1.15,roll),[1,1,1],{gl:1.1});drawMesh(X.cape[f.cape][Math.floor((t+f.ph)*12)%2],m4model(f.x,h,f.y,yaw,1.15,roll),[1,1,1],{gl:.9});}
   // transparent pass
   gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);
-  for(const k of G.karts){if(k.gulped)continue;const M=new Float32Array([28,0,0,0,0,1,0,0,0,0,20,0,k.x+4,1.9,k.y,1]);const c=Math.cos(-k.a),s=Math.sin(-k.a);M[0]=c*28;M[2]=-s*28;M[8]=s*20;M[10]=c*20;M[13]=1.9+kH(T,k);drawMesh(X.shadow,M,[1,1,1],{a:.22/(1+k.z/60),gl:0});}
+  for(const k of G.karts){if(k.gulped)continue;const M=new Float32Array([28,0,0,0,0,1,0,0,0,0,20,0,k.x+4,1.9,k.y,1]);const c=Math.cos(-k.a),s=Math.sin(-k.a);M[0]=c*28;M[2]=-s*28;M[8]=s*20;M[10]=c*20;M[13]=1.9+kH(T,k)+(k.swG||0);drawMesh(X.shadow,M,[1,1,1],{a:.22/(1+(k.z+(k.sz||0))/60),gl:0});}
   for(const sp of T.spinners){const a=sp.ph+sp.spd*G.t,ux=Math.cos(a),uy=Math.sin(a),bh=hh(T,sp.i)+34;
     for(let j=1;j<=14;j++){const f=j/14,d=f*sp.len,fl=Math.sin(t*25+j*1.7)*2;drawMesh(X.sphere,m4model(sp.x+ux*d,bh+Math.sin(f*Math.PI)*28-f*22+fl,sp.y+uy*d,0,5+f*5),[.78,.94,1],{a:.55-.2*f,gl:1.4,em:[.1,.15,.2]});}
     for(let j=0;j<6;j++){const f=.9+((t*1.3+j*.17)%1)*.3,d=f*sp.len,b2=a-sp.spd*.08*j;drawMesh(X.sphere,m4model(sp.x+Math.cos(b2)*d,bh-25*((t*1.3+j*.17)%1)+4,sp.y+Math.sin(b2)*d,0,3),[.85,.97,1],{a:.5,gl:1});}}
@@ -467,10 +471,13 @@ function render3D(vp){
   for(const f of G.fire){if(f.smoke||f.spray)continue;const dcf=Math.hypot(f.x-CAM3[0],f.h-CAM3[1],f.y-CAM3[2]);if(dcf<120)continue;const a=clamp(f.life/f.max,0,1)*clamp((dcf-120)/120,0,1);const col=a>.7?[1,.86,.25]:a>.4?[1,.5,.1]:[.95,.22,.12];
     drawMesh(X.sphere,m4model(f.x,f.h,f.y,0,f.s*(.55+a*.5)),col,{a:.55+.4*a,gl:0,em:[col[0]*.35,col[1]*.25,0]});
     if(a>.55)drawMesh(X.sphere,m4model(f.x,f.h,f.y,0,f.s*.35),[1,1,.75],{a:.9,gl:0,em:[.3,.3,.1]});}
+  for(const w of G.swells||[]){if(w.a<.4)continue;const L=T.cum[TN],f=w.s/L*TN,i=Math.floor(f)%TN,j=(i+1)%TN,u=f-Math.floor(f),a=T.pts[i],b=T.pts[j];
+    const x=lerp(a.x,b.x,u),z=lerp(a.y,b.y,u),hg=lerp(hh(T,i),hh(T,j),u),ang=a.a+angDiff(a.a,b.a)*u,sl=T.hgt?(hh(T,j+1)-hh(T,i-1))/(3*L/TN):0;
+    gl.uniform1f(U.uWater,1);drawMesh(X.swell,m4chain(m4T(x,.2+hg,z),m4Ry(-ang),m4Rz(Math.atan(sl)),m4S(1,w.a,T.w+40)),[1,1,1],{a:.9,gl:.7});gl.uniform1f(U.uWater,0);}
   for(const pd of G.puddles){const s=pd.r*pd.grow;const c=Math.cos(pd.rot),sn=Math.sin(pd.rot);const M=new Float32Array([c*s,0,-sn*s,0,0,30,0,0,sn*s,0,c*s,0,pd.x,1.6+hh(T,pd.i),pd.y,1]);drawMesh(X.splat[pd.v||0],M,[1,1,1],{a:Math.min(.97,pd.life),gl:2.2,em:[.02,.02,.02]});}
   for(const p of G.poos){const f=Math.max(0,1-p.h/150);const s=6+18*f;drawMesh(X.shadow,m4model(p.x,1.9+hh(T,p.i),p.y,0,s),[1,1,1],{a:.2+.3*f,gl:0});}
   for(const p of G.proj)if(p.type==='bubble')drawMesh(X.sphere,m4model(p.x,hh(T,p.idx)+20,p.y,0,15),[.66,.92,1],{a:.6,gl:1.6,em:[.15,.2,.25]});
-  for(const k of G.karts)if(k.shield>0)drawMesh(X.sphere,m4model(k.x,kH(T,k)+k.z+24,k.y,t,38),[.5,.95,1],{a:.25+Math.sin(t*8)*.06,gl:1.6,em:[.1,.2,.25]});
+  for(const k of G.karts)if(k.shield>0)drawMesh(X.sphere,m4model(k.x,kZ(T,k)+24,k.y,t,38),[.5,.95,1],{a:.25+Math.sin(t*8)*.06,gl:1.6,em:[.1,.2,.25]});
   gl.depthMask(true);gl.disable(gl.BLEND);if(vp)gl.disable(gl.SCISSOR_TEST);
 }
 function hsl2rgb(h,s,l){const f=n=>{const k=(n+h*12)%12;const a=s*Math.min(l,1-l);return l-a*Math.max(-1,Math.min(k-3,9-k,1))};return [f(0),f(8),f(4)]}
@@ -487,16 +494,16 @@ function overlay3D(c){
   for(const p of G.parts){const a=p.life/p.max;if(p.ring){const q=proj3(p.x,6+T.hAt(p.x,p.y),p.y);if(!q)continue;c.strokeStyle=`rgba(255,225,77,${a})`;c.lineWidth=10*a;c.beginPath();c.ellipse(q.x,q.y,(1-a)*700*q.s,(1-a)*700*q.s*.35,0,0,TAU);c.stroke();continue}
     const q=proj3(p.x,(p.type==='star'?30:10)+T.hAt(p.x,p.y),p.y);if(!q)continue;const r=Math.max(1,p.s*q.s*(.5+a*.5)*1.4);c.globalAlpha=a;c.fillStyle=p.c;if(p.type==='star'){star(c,q.x,q.y-(1-a)*20,r*1.6,r*.7,5);c.fill()}else circ(c,q.x,q.y,r);c.globalAlpha=1;}
   // karts: tags, hp, stars
-  const ks=[...G.karts].map(k=>({k,p:proj3(k.x,60+kH(T,k)+k.z,k.y)})).filter(o=>o.p&&o.p.w<3200).sort((a,b)=>b.p.w-a.p.w);
+  const ks=[...G.karts].map(k=>({k,p:proj3(k.x,60+kZ(T,k),k.y)})).filter(o=>o.p&&o.p.w<3200).sort((a,b)=>b.p.w-a.p.w);
   for(const {k,p} of ks){
-    if(k.dizzy>0||k.spin>0||k.ko>0){for(let i=0;i<4;i++){const a=t*6+i*TAU/4;const q=proj3(k.x+Math.cos(a)*24,52+kH(T,k)+k.z+Math.sin(a*2)*2,k.y+Math.sin(a)*24);if(q){c.fillStyle='#ffe14d';star(c,q.x,q.y,7*q.s*1.6,3*q.s*1.6,5);c.fill();}}}
+    if(k.dizzy>0||k.spin>0||k.ko>0){for(let i=0;i<4;i++){const a=t*6+i*TAU/4;const q=proj3(k.x+Math.cos(a)*24,52+kZ(T,k)+Math.sin(a*2)*2,k.y+Math.sin(a)*24);if(q){c.fillStyle='#ffe14d';star(c,q.x,q.y,7*q.s*1.6,3*q.s*1.6,5);c.fill();}}}
     if(k===G.player)continue;
     const sc=clamp(p.s*1.4,.45,1.3)*(k.isP?1.15:1);
     const by=p.y-6*sc,nm=k.isP?'P'+(k.pi+1)+' '+k.f.name:k.f.name;
     c.font=`600 ${15*sc|0}px ${BFONT}`;const tw=c.measureText(nm).width+12*sc;c.fillStyle=k.isP?(k.pi?'rgba(255,95,162,.92)':'rgba(214,160,0,.92)'):'rgba(59,29,143,.7)';rr(c,p.x-tw/2,by-24*sc,tw,19*sc,9*sc);c.fill();c.fillStyle='#fff';c.fillText(nm,p.x,by-14.5*sc);
   }
   // tongue lock-on
-  {const P=G.player,o=P.lock;if(P.tongueT>0&&o){const q=proj3(o.x,kH(T,o)+o.z+24,o.y);if(q){const R=clamp(q.s*55,22,70),sp=t*3;c.save();c.translate(q.x,q.y);c.rotate(sp);c.strokeStyle=P.tongueCD>0?'rgba(255,138,216,.5)':'#ff3d78';c.lineWidth=4;
+  {const P=G.player,o=P.lock;if(P.tongueT>0&&o){const q=proj3(o.x,kZ(T,o)+24,o.y);if(q){const R=clamp(q.s*55,22,70),sp=t*3;c.save();c.translate(q.x,q.y);c.rotate(sp);c.strokeStyle=P.tongueCD>0?'rgba(255,138,216,.5)':'#ff3d78';c.lineWidth=4;
       c.beginPath();c.arc(0,0,R,0,TAU);c.stroke();for(let i=0;i<4;i++){c.rotate(Math.PI/2);c.beginPath();c.moveTo(R-8,0);c.lineTo(R+10,0);c.stroke();}c.restore();
       c.font='14px '+FONT;c.textAlign='center';c.lineWidth=4;c.strokeStyle='#3b1d8f';c.strokeText('LOCKED',q.x,q.y+R+20);c.fillStyle='#ff8ad8';c.fillText('LOCKED',q.x,q.y+R+20);}}}
   // floating texts

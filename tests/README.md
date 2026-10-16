@@ -25,6 +25,8 @@ Useful ones:
 | `t103.py` | frogs dance on hover and stop when they talk |
 | `t109.py <track numbers>` | two-player races driven to the finish, with the results text |
 | `t110.py` | split-screen screenshots: side by side, stacked, and a tablet with two sets of buttons |
+| `t112.py <track numbers>` | swells: how often racers hop, how high, and that the water never jumps between frames |
+| `t113.py` | screenshots of a swell ahead and a jetski hopping over one |
 | `t111.py` | game controllers drive each player, and the two-player results screen |
 
 The rest are one-off checks from earlier development, kept for reference. The Swiftshader browser flags some of them use (`--use-angle=swiftshader`) let WebGL run on machines without a graphics card.

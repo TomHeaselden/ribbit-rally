@@ -19,6 +19,7 @@ A bright, bouncy kids' racing game: eight frogs on jetskis race around **81 pond
 - **8 frogs**, each with their own stats, a hat or accessory, a voice line and a funny blink: Zippy, Lulu, Bonk, Pip, Mango, Douglas Moleseed, Fern and Rocket
 - **4 levels:** gentle Level 1, sharp-turning Level 2, hairpin-crazy Level 3, and Level 4's rolling waves, boost pads and S-bends (including *Doodle Dash* and *Tower Twister*, both drawn from sketches. Tower Twister has a corkscrew water-slide tower and a giant drop)
 - A Mario Kart-style countdown with revving jet engines, exhaust flames, flying frogs and wheelie starts
+- Gentle swells drifting down every course: bob over them, or hit one fast and get a little air
 - A jet engine that never stops, with 3 gears, a turbo whistle, dump-valve "pssh" and AMG-style crackles and pops
 - A speedometer and gear display, a minimap, lap counter and pumping race music (all made in code, so no copyrighted music)
 
