@@ -23,5 +23,8 @@ Useful ones:
 | `t92.py` | frog voice lines (uses a stand-in speech voice) |
 | `t102.py` | draws each frog's hover dance as a sheet of frames (`dance-poses.png`) |
 | `t103.py` | frogs dance on hover and stop when they talk |
+| `t109.py <track numbers>` | two-player races driven to the finish, with the results text |
+| `t110.py` | split-screen screenshots: side by side, stacked, and a tablet with two sets of buttons |
+| `t111.py` | game controllers drive each player, and the two-player results screen |
 
 The rest are one-off checks from earlier development, kept for reference. The Swiftshader browser flags some of them use (`--use-angle=swiftshader`) let WebGL run on machines without a graphics card.

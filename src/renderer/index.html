@@ -97,6 +97,11 @@ h2{font-size:clamp(2rem,5.5vw,3rem);color:#fff;-webkit-text-stroke:2px var(--ink
 .card.poshtalk .say{font-family:Georgia,'Times New Roman',serif;font-style:italic;font-weight:700;border-color:#c9962b;box-shadow:0 4px 0 #c9962b,0 0 0 3px #fff3c4 inset;animation:sayin .25s cubic-bezier(.3,1.6,.5,1)}
 .card.poshtalk .say::after{border-color:#c9962b}
 .card.sel{background:linear-gradient(180deg,#fffbd1,#fff);box-shadow:0 0 0 5px var(--sun),0 6px 0 var(--ink),0 14px 24px rgba(59,29,143,.25)}
+.card.sel2{background:linear-gradient(180deg,#ffe0f1,#fff);box-shadow:0 0 0 5px var(--pink),0 6px 0 var(--ink),0 14px 24px rgba(59,29,143,.25)}
+.card.taken{opacity:.55;filter:saturate(.5);cursor:not-allowed}
+.card .pb{position:absolute;top:-14px;right:-10px;z-index:6;font-family:var(--display);font-size:1.15rem;padding:3px 13px;border-radius:999px;border:3px solid var(--ink);background:var(--sun);color:var(--ink);box-shadow:0 3px 0 var(--ink);pointer-events:none}
+.card .pb[data-p="P2"]{background:var(--pink);color:#fff;-webkit-text-stroke:1px var(--ink);paint-order:stroke fill}
+.tb.p2{background:rgba(255,95,162,.55)}
 .card canvas{width:100%;height:auto;border-radius:18px;display:block}
 .card .nm{font-family:var(--display);font-size:1.3rem;line-height:1.05}
 .card .sub{font-size:.85rem;font-weight:700;color:var(--ink-soft);display:flex;justify-content:space-between;gap:6px}
@@ -136,8 +141,8 @@ h2{font-size:clamp(2rem,5.5vw,3rem);color:#fff;-webkit-text-stroke:2px var(--ink
 #hudBtns{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:12px;display:flex;gap:8px;z-index:5}
 .round.off{opacity:.55;text-decoration:line-through}
 .round{width:46px;height:46px;border-radius:50%;border:3px solid #fff;background:var(--ink);color:#fff;font-family:var(--display);font-size:1.1rem;cursor:pointer;box-shadow:0 3px 0 rgba(0,0,0,.25)}
-#touch{position:fixed;left:0;right:0;bottom:0;padding:0 14px calc(14px + env(safe-area-inset-bottom,0px));display:flex;justify-content:space-between;align-items:flex-end;pointer-events:none;z-index:4}
-#touch .grp{display:flex;gap:12px;pointer-events:auto}
+#touch,#touch2{position:fixed;left:0;right:0;bottom:0;padding:0 14px calc(14px + env(safe-area-inset-bottom,0px));display:flex;justify-content:space-between;align-items:flex-end;pointer-events:none;z-index:4}
+#touch .grp,#touch2 .grp{display:flex;gap:12px;pointer-events:auto}
 .tb{width:80px;height:80px;border-radius:50%;border:4px solid #fff;background:rgba(59,29,143,.55);color:#fff;font-family:var(--display);font-size:1.6rem;touch-action:none;box-shadow:0 5px 0 rgba(59,29,143,.6)}
 .tb.on{background:var(--sun);color:var(--ink)}
 .tb.item{background:linear-gradient(180deg,#ffb3dd,var(--pink));width:94px;height:94px;font-size:1.2rem}
@@ -168,6 +173,7 @@ h2{font-size:clamp(2rem,5.5vw,3rem);color:#fff;-webkit-text-stroke:2px var(--ink
     <canvas id="hero" width="1120" height="300"></canvas>
     <div class="row center">
       <button class="btn big green" id="bPlay">Let's Race!</button>
+      <button class="btn big pink" id="bPlay2">2 Players</button>
       <button class="btn ghost" id="bMusT">Music: On</button>
     </div>
     <div class="panel">
@@ -177,6 +183,7 @@ h2{font-size:clamp(2rem,5.5vw,3rem);color:#fff;-webkit-text-stroke:2px var(--ink
         <div><b>Go &amp; brake</b>Your jetski drives itself with Auto-Go on. Hold ▼ or S to brake. Turn Auto-Go off to press ▲ or W yourself.</div>
         <div><b>Grab boxes</b>Drive through the spinning ? boxes to get a surprise item.</div>
         <div><b>Use items</b>Press Space (or the ITEM button) to use what you picked up.</div>
+        <div><b>Two players</b>Press 2 Players to race a friend on one screen, split down the middle. Player 1 steers with A / D, brakes with S and uses items with Space. Player 2 steers with the arrow keys, brakes with ▼ and uses items with Enter. Game controllers work too: plug in one each. On a tablet, each player gets their own buttons.</div>
         <div><b>Four levels</b>Level 1 is gentle. Level 2 adds sharp turns and a garden sprinkler. Level 3 is hairpin madness with swarms of insects. Hit an insect or get caught in a sprinkler's jet of water and you'll spin out! Sprinklers spray one way at a time, so go round the side the water isn't on.</div>
         <div><b>Level 4 waves</b>Surf faster riding down a wave and slow down pushing up one. Hit the top of a wave fast and you'll fly through the air!</div>
         <div><b>Watch out for the carp!</b>Colourful koi swim around the pond. When one pops its head up with its mouth open, steer clear, or it will gulp you down and spit you high into the air!</div>
@@ -192,8 +199,8 @@ h2{font-size:clamp(2rem,5.5vw,3rem);color:#fff;-webkit-text-stroke:2px var(--ink
 <section class="screen" id="sFrog" hidden>
   <div class="wrap">
     <div class="row between">
-      <h2>Pick your frog</h2>
-      <button class="btn ghost" data-go="sTitle">Back</button>
+      <h2 id="frogTitle">Pick your frog</h2>
+      <button class="btn ghost" id="bFrogBack">Back</button>
     </div>
     <div class="grid frogs" id="frogGrid"></div>
     <div class="row center"><button class="btn big green" id="bToTracks">Next: pick a track</button></div>
@@ -249,6 +256,10 @@ h2{font-size:clamp(2rem,5.5vw,3rem);color:#fff;-webkit-text-stroke:2px var(--ink
 </section>
 
 <div id="hudBtns" hidden><button class="round" id="bMus" aria-label="Music on or off">♪</button><button class="round" id="bPause" aria-label="Pause">II</button></div>
+<div id="touch2" hidden>
+  <div class="grp"><button class="tb p2" id="tL2" aria-label="Player 2 steer left">◀</button><button class="tb p2" id="tR2" aria-label="Player 2 steer right">▶</button></div>
+  <div class="grp" style="align-items:flex-end"><button class="tb small p2" id="tB2" aria-label="Player 2 brake">▼</button><button class="tb small p2" id="tG2" aria-label="Player 2 go" hidden>▲</button><button class="tb item" id="tI2">ITEM</button></div>
+</div>
 <div id="touch" hidden>
   <div class="grp"><button class="tb" id="tL" aria-label="Steer left">◀</button><button class="tb" id="tR" aria-label="Steer right">▶</button></div>
   <div class="grp" style="align-items:flex-end"><button class="tb small" id="tB" aria-label="Brake">▼</button><button class="tb small" id="tG" aria-label="Go" hidden>▲</button><button class="tb item" id="tI">ITEM</button></div>

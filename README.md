@@ -11,8 +11,11 @@ A bright, bouncy kids' racing game: eight frogs on jetskis race around **81 pond
 
 **Controls:** arrow keys or A / D to steer, ▼ / S to brake, Space to use an item, F11 for full screen. Phones and tablets get big on-screen buttons.
 
+**Two players:** press **2 Players** on the title screen to race a friend on one split screen. Player 1 uses A / D to steer, S to brake and Space for items; Player 2 uses the arrow keys and Enter. Game controllers work too (one each), and on a tablet each player gets their own buttons.
+
 ## What's in the game
 
+- **2-player split screen** on one keyboard, two game controllers or a tablet
 - **8 frogs**, each with their own stats, a hat or accessory, a voice line and a funny blink: Zippy, Lulu, Bonk, Pip, Mango, Douglas Moleseed, Fern and Rocket
 - **4 levels:** gentle Level 1, sharp-turning Level 2, hairpin-crazy Level 3, and Level 4's rolling waves, boost pads and S-bends (including *Doodle Dash* and *Tower Twister*, both drawn from sketches. Tower Twister has a corkscrew water-slide tower and a giant drop)
 - A Mario Kart-style countdown with revving jet engines, exhaust flames, flying frogs and wheelie starts

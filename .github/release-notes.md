@@ -27,3 +27,5 @@ This is a free indie game without a paid Microsoft or Apple certificate, so your
 ### How to play
 
 Steer with the **arrow keys** or **A / D**, brake with **▼ / S**, and use items with **Space**. Press **F11** for full screen. On a phone or tablet, use the big on-screen buttons.
+
+**Two players:** press **2 Players** on the title screen for split screen. Player 1: A / D to steer, S to brake, Space for items. Player 2: arrow keys and Enter. Or plug in two game controllers.

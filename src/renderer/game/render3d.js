@@ -394,10 +394,13 @@ function extraMeshes(){
 
 // ---- per-frame ----
 let VP3=null,P3=null,CAM3=[0,0,0];
-function render3D(){
+// vp (split screen): which part of the page to draw this player's view into; W and H are that view's size
+function render3D(vp){
   const gl=GL3.gl,U=GL3.U,T=G.T,th=T.th;const cvs=GL3.cvs;
-  const R=Math.min(1.5,DPR);const cw=W*R|0,ch=H*R|0;if(cvs.width!==cw||cvs.height!==ch){cvs.width=cw;cvs.height=ch;}
-  gl.viewport(0,0,cw,ch);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+  const R=Math.min(vp?1.25:1.5,DPR),FW=vp?vp.fw:W,FH=vp?vp.fh:H;const cw=FW*R|0,ch=FH*R|0;if(cvs.width!==cw||cvs.height!==ch){cvs.width=cw;cvs.height=ch;}
+  if(vp){const x=Math.round(vp.x*R),y=Math.round((FH-vp.y-vp.h)*R),w=Math.round(vp.w*R),h=Math.round(vp.h*R);gl.enable(gl.SCISSOR_TEST);gl.scissor(x,y,w,h);gl.viewport(x,y,w,h);}
+  else{gl.disable(gl.SCISSOR_TEST);gl.viewport(0,0,cw,ch);}
+  gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
   const P=G.player,yaw=G.camYaw+(G.camOrbit||0);
   const sh=G.shake>0?(Math.random()-.5)*10*G.shake:0;
   const port=H>W*1.05;const dist=port?175:150,hgt=port?78:66;let ex=P.x-Math.cos(yaw)*dist,ez=P.y-Math.sin(yaw)*dist;
@@ -468,7 +471,7 @@ function render3D(){
   for(const p of G.poos){const f=Math.max(0,1-p.h/150);const s=6+18*f;drawMesh(X.shadow,m4model(p.x,1.9+hh(T,p.i),p.y,0,s),[1,1,1],{a:.2+.3*f,gl:0});}
   for(const p of G.proj)if(p.type==='bubble')drawMesh(X.sphere,m4model(p.x,hh(T,p.idx)+20,p.y,0,15),[.66,.92,1],{a:.6,gl:1.6,em:[.15,.2,.25]});
   for(const k of G.karts)if(k.shield>0)drawMesh(X.sphere,m4model(k.x,kH(T,k)+k.z+24,k.y,t,38),[.5,.95,1],{a:.25+Math.sin(t*8)*.06,gl:1.6,em:[.1,.2,.25]});
-  gl.depthMask(true);gl.disable(gl.BLEND);
+  gl.depthMask(true);gl.disable(gl.BLEND);if(vp)gl.disable(gl.SCISSOR_TEST);
 }
 function hsl2rgb(h,s,l){const f=n=>{const k=(n+h*12)%12;const a=s*Math.min(l,1-l);return l-a*Math.max(-1,Math.min(k-3,9-k,1))};return [f(0),f(8),f(4)]}
 function proj3(x,h,z){if(!VP3)return null;const m=VP3;const cx=m[0]*x+m[4]*h+m[8]*z+m[12],cy=m[1]*x+m[5]*h+m[9]*z+m[13],w=m[3]*x+m[7]*h+m[11]*z+m[15];if(w<6)return null;
@@ -487,10 +490,10 @@ function overlay3D(c){
   const ks=[...G.karts].map(k=>({k,p:proj3(k.x,60+kH(T,k)+k.z,k.y)})).filter(o=>o.p&&o.p.w<3200).sort((a,b)=>b.p.w-a.p.w);
   for(const {k,p} of ks){
     if(k.dizzy>0||k.spin>0||k.ko>0){for(let i=0;i<4;i++){const a=t*6+i*TAU/4;const q=proj3(k.x+Math.cos(a)*24,52+kH(T,k)+k.z+Math.sin(a*2)*2,k.y+Math.sin(a)*24);if(q){c.fillStyle='#ffe14d';star(c,q.x,q.y,7*q.s*1.6,3*q.s*1.6,5);c.fill();}}}
-    if(k.isP)continue;
-    const sc=clamp(p.s*1.4,.45,1.3);
-    const by=p.y-6*sc;
-    c.font=`600 ${15*sc|0}px ${BFONT}`;const tw=c.measureText(k.f.name).width+12*sc;c.fillStyle='rgba(59,29,143,.7)';rr(c,p.x-tw/2,by-24*sc,tw,19*sc,9*sc);c.fill();c.fillStyle='#fff';c.fillText(k.f.name,p.x,by-14.5*sc);
+    if(k===G.player)continue;
+    const sc=clamp(p.s*1.4,.45,1.3)*(k.isP?1.15:1);
+    const by=p.y-6*sc,nm=k.isP?'P'+(k.pi+1)+' '+k.f.name:k.f.name;
+    c.font=`600 ${15*sc|0}px ${BFONT}`;const tw=c.measureText(nm).width+12*sc;c.fillStyle=k.isP?(k.pi?'rgba(255,95,162,.92)':'rgba(214,160,0,.92)'):'rgba(59,29,143,.7)';rr(c,p.x-tw/2,by-24*sc,tw,19*sc,9*sc);c.fill();c.fillStyle='#fff';c.fillText(nm,p.x,by-14.5*sc);
   }
   // tongue lock-on
   {const P=G.player,o=P.lock;if(P.tongueT>0&&o){const q=proj3(o.x,kH(T,o)+o.z+24,o.y);if(q){const R=clamp(q.s*55,22,70),sp=t*3;c.save();c.translate(q.x,q.y);c.rotate(sp);c.strokeStyle=P.tongueCD>0?'rgba(255,138,216,.5)':'#ff3d78';c.lineWidth=4;
