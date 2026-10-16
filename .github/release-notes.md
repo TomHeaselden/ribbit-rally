@@ -2,6 +2,14 @@
 
 Eight hoppy frogs on jetskis, 81 pond courses across 4 levels, power-ups, koi carp and a lot of ribbits.
 
+### What's new
+
+- **2-player split screen:** press **2 Players** on the title screen to race a friend on one screen. Use one keyboard, two game controllers, or a tablet with a set of buttons for each player.
+- **New track, Tower Twister (Level 4):** a corkscrew water-slide tower with a giant drop.
+- **Dancing frogs:** hover over a frog on the frog picker and it dances. Zippy shimmies, Lulu twerks, Bonk rubs his tummy, Pip's hat spins, Mango dabs, Douglas does the robot, Fern pulls a silly face and Rocket moonwalks.
+- Bonk now says his line in one slow, dopey go.
+- Two Level 4 tracks (Surf Slope Scramble and Neon Skyway) are gone, leaving 81 tracks.
+
 ### Which file do I download?
 
 Scroll down to **Assets** and pick the one for your device:
