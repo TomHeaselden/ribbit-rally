@@ -941,6 +941,7 @@ function update(dt){
   // places
   const sorted=[...K].sort((a,b)=>{if(a.fin&&b.fin)return a.ft-b.ft;if(a.fin)return -1;if(b.fin)return 1;return b.prog-a.prog});
   sorted.forEach((k,i)=>k.place=i+1);
+  for(const k of K)k.lbY=k.lbY==null?k.place:k.lbY+(k.place-k.lbY)*Math.min(1,dt*9);
   updateParts(dt);forViews(()=>{camUpdate(dt);viewTick(dt);});
   // two players: once one has finished, the other gets 30 seconds to cross the line
   if(G.waitT&&G.state==='race'){G.waitT-=dt;if(G.waitT<=0){G.state='done';G.endT=.5;}}
@@ -1296,6 +1297,27 @@ function render2D(){
 }
 const FONT="'Titan One','Arial Rounded MT Bold',sans-serif",BFONT="'Fredoka',sans-serif";
 function outlined(c,s,x,y,size,fill,align='left'){c.font=size+'px '+FONT;c.textAlign=align;c.textBaseline='alphabetic';c.lineJoin='round';const lw=Math.max(5,size/6);c.lineWidth=lw;c.strokeStyle='#3b1d8f';c.strokeText(s,x,y+size*.08);c.strokeText(s,x,y);c.fillStyle=fill;c.fillText(s,x,y);c.fillStyle='rgba(255,255,255,.35)';c.save();c.beginPath();c.rect(x-2000,y-size*.75,4000,size*.25);c.clip();c.fillText(s,x,y);c.restore()}
+// ================= leaderboard =================
+// one row per racer: place, a little picture of the frog and their name. You (and in 2-player, both players) are highlighted.
+function drawLeaderboard(c,x,y,w,rh,P,two){const K=G.karts,n=K.length,pad=4,h=n*rh+pad*2-3;
+  c.save();c.fillStyle='rgba(59,29,143,.55)';rr(c,x-6,y-6,w+12,h+12,18);c.fill();c.strokeStyle='rgba(255,255,255,.5)';c.lineWidth=3;c.stroke();
+  const fs=Math.max(10,Math.round(rh*.6)),ic=rh-3;c.textBaseline='middle';
+  for(const k of [...K].sort((a,b)=>(a===P)-(b===P))){const ry=y+pad+((k.lbY==null?k.place:k.lbY)-1)*rh,me=k===P,hum=k.isP&&two,cy=ry+(rh-3)/2;
+    const hi=me||hum;c.fillStyle=hi?(two&&k.pi===1?'rgba(255,95,162,.95)':'rgba(255,225,77,.95)'):'rgba(255,255,255,.13)';rr(c,x,ry,w,rh-3,(rh-3)/2);c.fill();
+    if(me){c.strokeStyle='#fff';c.lineWidth=2;c.stroke();}
+    // place
+    const pc=k.place===1?'#ffd23f':k.place===2?'#e6ecf5':k.place===3?'#ff9d5c':'#ffffff';
+    c.font=fs+'px '+FONT;c.textAlign='center';c.lineWidth=3;c.strokeStyle='#3b1d8f';if(!hi)c.strokeText(String(k.place),x+fs*.75,cy+1);c.fillStyle=hi?'#3b1d8f':pc;c.fillText(String(k.place),x+fs*.75,cy+1);
+    // the frog's face (cropped from its menu picture), or a dot of its colour
+    const ix=x+fs*1.55,E=THUMB_EYES[k.fi],im=THUMBS[k.fi];
+    if(im&&E){const ex=(E[0].c[0]+E[1].c[0])/2,ey=(E[0].c[1]+E[1].c[1])/2+14,cs=118;c.save();c.beginPath();c.arc(ix+ic/2,cy,ic/2,0,TAU);c.fillStyle=hi?'rgba(255,255,255,.7)':'rgba(255,255,255,.85)';c.fill();c.clip();c.drawImage(im,ex-cs/2,ey-cs/2,cs,cs,ix,cy-ic/2,ic,ic);c.restore();}
+    else{c.fillStyle=k.f.kart;circ(c,ix+ic/2,cy,ic/2.4);}
+    // name (shortened if it doesn't fit) and a chequered flag once they've finished
+    const nx=ix+ic+5,room=x+w-nx-(k.fin?16:8);c.font=`600 ${fs}px ${BFONT}`;c.textAlign='left';let nm=(hum?'P'+(k.pi+1)+' ':'')+k.f.name;
+    if(c.measureText(nm).width>room){while(nm.length>2&&c.measureText(nm+'…').width>room)nm=nm.slice(0,-1);nm+='…';}
+    c.fillStyle=hi?'#3b1d8f':'#ffffff';c.fillText(nm,nx,cy+1);
+    if(k.fin){const fx=x+w-15,fy=cy-5,q=3.4;for(let i=0;i<3;i++)for(let j=0;j<3;j++){c.fillStyle=(i+j)%2?'#111':'#fff';c.fillRect(fx+i*q,fy+j*q,q,q);}}}
+  c.restore();}
 // ================= speedo =================
 const MPH=.11,SPD_MAX=140; // game speed units -> mph on the dial; dial runs 0-140 mph
 function speedoTick(dt){const P=G.player;const v=G.state==='count'?0:Math.abs(P.speed)*MPH;
@@ -1304,11 +1326,13 @@ function speedoTick(dt){const P=G.player;const v=G.state==='count'?0:Math.abs(P.
   G.spdV+=((v-G.spdN)*60-G.spdV*11)*dt;G.spdN+=G.spdV*dt;if(G.spdN<0){G.spdN=0;G.spdV=0;}
   G.spdD+=(v-G.spdD)*Math.min(1,dt*8);}
 function speedoCol(u){const h=u<.45?130-80*(u/.45):u<.72?50-25*((u-.45)/.27):25-45*((u-.72)/.28);return `hsl(${(h+360)%360},95%,${u<.45?52:58}%)`}
-function drawSpeedo(c){const P=G.player,mn=Math.min(W,H),sm=mn<600,R=Math.round(clamp(mn*.13,46,76)),m=sm?14:22;
+function speedoBox(){const mn=Math.min(W,H),sm=mn<600,R=Math.round(clamp(mn*.13,46,76)),m=sm?14:22;
   let cx=W-R-6-m,cy=H-R-6-m;
   if(isTouch){const rightW=14+94+12+64+12,leftW=14+80*2+12+12;
     if(W-rightW-leftW>=2*R+30+R*.74+12)cx=W-rightW-R-6;   // room beside the buttons (landscape)
     else cy=H-(14+94+20)-R-6;}                     // otherwise sit on top of them (portrait)
+  return {R,cx,cy,sm,m}}
+function drawSpeedo(c){const P=G.player,{R,cx,cy,sm,m}=speedoBox();
   const a0=Math.PI*5/6,sw=Math.PI*4/3,mph=G.spdN||0,fr=clamp(mph/SPD_MAX,0,1),boost=P.boost>0||P.star>0,t=G.t;
   c.save();
   // chunky body with a white rim (glows hot when boosting)
@@ -1354,22 +1378,29 @@ function drawHUD(c){
   outlined(c,'LAP '+Math.min(P.lap,G.laps)+'/'+G.laps,16,top+ps+(sm?22:30),sm?20:28,'#fff');
   const two=G.players.length>1,KN=two&&P.pi?'ENTER':'SPACE';
   if(two)outlined(c,'P'+(P.pi+1)+' · '+P.f.name,16,top+ps+(sm?48:64),sm?18:24,P.pi?'#ff8ad8':'#ffe14d');
-  // time
-  outlined(c,fmtT(G.raceT),W-122,top+(sm?28:34),sm?20:28,'#fff','right');
+  // time (on narrow screens it goes on the left, under the lap counter, so the item box doesn't cover it)
+  const bs=sm?64:84,bx=W/2-bs/2,by=top;let leftY=top+ps+(two?(sm?60:76):(sm?36:44));
+  {const ts=sm?20:28;c.font=ts+'px '+FONT;const tw=c.measureText(fmtT(G.raceT)).width;
+   if(W-122-tw<W/2+bs/2+6){outlined(c,fmtT(G.raceT),16,leftY+ts*.4,ts,'#fff');leftY+=ts+8;}else outlined(c,fmtT(G.raceT),W-122,top+(sm?28:34),ts,'#fff','right');}
   // item slot
-  const bs=sm?64:84,bx=W/2-bs/2,by=top;
   {const g=c.createLinearGradient(0,by,0,by+bs);g.addColorStop(0,'#ff8ad8');g.addColorStop(1,'#8f5cff');c.fillStyle='#3b1d8f';rr(c,bx-3,by+2,bs+6,bs+6,24);c.fill();c.fillStyle=g;rr(c,bx,by,bs,bs,22);c.fill();c.fillStyle='rgba(255,255,255,.3)';rr(c,bx+6,by+5,bs-12,bs*.3,12);c.fill();c.strokeStyle='#fff';c.lineWidth=4;rr(c,bx,by,bs,bs,22);c.stroke();}
   const ik=P.tongueT>0?'tongue':P.roul>0?Object.keys(ITEMS)[Math.floor(t*14)%Object.keys(ITEMS).length]:P.item;
   if(ik){drawItemIcon(c,ik,W/2,by+bs/2,bs*.72,t);}
   if(P.tongueT>0){c.strokeStyle='#ff3d78';c.lineWidth=6;c.lineCap='round';c.beginPath();c.arc(W/2,by+bs/2,bs*.58,-Math.PI/2,-Math.PI/2+TAU*P.tongueT/8);c.stroke();
     const lbl=P.lock?(P.tongueCD>0?'Reloading...':(isTouch?'TAP ITEM: YANK!':KN+': YANK!')):'No frog ahead';c.font='600 14px '+BFONT;c.textAlign='center';c.lineWidth=4;c.strokeStyle='#3b1d8f';c.strokeText(lbl,W/2,by+bs+20);c.fillStyle=P.lock?'#ff8ad8':'#ffffff';c.fillText(lbl,W/2,by+bs+20);}
   else if(P.item&&!isTouch){c.font='13px '+BFONT;c.fillStyle='rgba(255,255,255,.85)';c.textAlign='center';c.fillText(KN,W/2,by+bs+16)}
-  // minimap
-  const T=G.T,ms=sm?110:150,mx=W-ms-14,my=top+(sm?40:50),bb=T.bb,sc=ms/Math.max(bb.maxX-bb.minX,bb.maxY-bb.minY);
+  // leaderboard in the top right: every racer from first to last, sliding up and down as places change
+  const sb=speedoBox(),floor=Math.min(sb.cy-sb.R-36,isTouch?H-120:1e9),n=G.karts.length,lbW=sm?150:196,lbX=W-lbW-14,lbY=lbX-8<W/2+bs/2+6?by+bs+26:top+(sm?40:50);   // narrow screens: below the item box
+  const rowH=Math.max(14,Math.min(sm?19:25,(floor-lbY-14)/n)),lbH=n*rowH+6;drawLeaderboard(c,lbX,lbY,lbW,rowH,P,two);
+  // minimap under the leaderboard, or on the left under the lap counter if there's no room
+  let ms=sm?110:150,mx=W-ms-14,my=lbY+lbH+22;
+  if(my+ms+8>floor){mx=22;my=leftY+14;ms=Math.min(ms,(isTouch?H-14-80-24:H-16)-my-8);}
+  if(ms>=64){
+  const T=G.T,bb=T.bb,sc=ms/Math.max(bb.maxX-bb.minX,bb.maxY-bb.minY);
   const ox=mx+(ms-(bb.maxX-bb.minX)*sc)/2-bb.minX*sc,oy=my+(ms-(bb.maxY-bb.minY)*sc)/2-bb.minY*sc;
   c.fillStyle='rgba(59,29,143,.55)';rr(c,mx-8,my-8,ms+16,ms+16,22);c.fill();c.strokeStyle='rgba(255,255,255,.5)';c.lineWidth=3;c.stroke();
   c.save();c.translate(ox,oy);c.scale(sc,sc);c.strokeStyle='rgba(255,255,255,.85)';c.lineWidth=T.w*.6;c.lineJoin='round';c.stroke(T.path);c.restore();
-  const rk=k=>k===P?2:k.isP?1:0;for(const k of [...G.karts].sort((a,b)=>rk(a)-rk(b))){c.fillStyle=k.f.kart;c.strokeStyle=k.isP&&two?(k.pi?'#ff5fa2':'#ffd23f'):'#3b1d8f';c.lineWidth=k.isP&&two?3:2;c.beginPath();c.arc(ox+k.x*sc,oy+k.y*sc,k===P?7:k.isP?6:4.5,0,TAU);c.fill();c.stroke();}
+  const rk=k=>k===P?2:k.isP?1:0;for(const k of [...G.karts].sort((a,b)=>rk(a)-rk(b))){c.fillStyle=k.f.kart;c.strokeStyle=k.isP&&two?(k.pi?'#ff5fa2':'#ffd23f'):'#3b1d8f';c.lineWidth=k.isP&&two?3:2;c.beginPath();c.arc(ox+k.x*sc,oy+k.y*sc,k===P?7:k.isP?6:4.5,0,TAU);c.fill();c.stroke();}}
   drawSpeedo(c);
   // countdown lights
   if(G.cd>-0.8){const n=Math.ceil(G.cd-1.2),go=G.cd<=1.2;const cx=W/2,cy=H*.3,r=sm?22:30,pw=r*7.4;
