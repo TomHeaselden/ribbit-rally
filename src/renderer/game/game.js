@@ -1124,13 +1124,25 @@ function stepKart(k,dt){
   if(off&&Math.abs(k.speed)>120&&Math.random()<.4)G.parts.push({x:k.x-Math.cos(k.a)*20,y:k.y-Math.sin(k.a)*20,vx:(Math.random()-.5)*60,vy:(Math.random()-.5)*60,life:.5,max:.5,c:'rgba(120,90,50,.45)',s:6});
   if((k.boost>0||k.star>0)&&Math.random()<.8)G.parts.push({x:k.x-Math.cos(k.a)*28,y:k.y-Math.sin(k.a)*28,vx:-Math.cos(k.a)*120+(Math.random()-.5)*60,vy:-Math.sin(k.a)*120+(Math.random()-.5)*60,life:.35,max:.35,c:k.star>0?`hsl(${Math.random()*360},95%,60%)`:(Math.random()<.5?'#ffb627':'#ff5a1f'),s:6});
   // wrong way
-  if(k.isP){const fd=Math.cos(angDiff(k.a,q.a));k.wrong=(fd<-.3&&Math.abs(k.speed)>60&&k.spin<=0)?k.wrong+dt:0;}
+  if(k.isP){const fd=Math.cos(angDiff(k.a,q.a));k.wrong=(fd<-.3&&Math.abs(k.speed)>60&&k.spin<=0)?k.wrong+dt:0;
+    // spun out and left facing the wrong way, or stuck: after 3 seconds you're popped back on the track facing forwards
+    if(G.state==='race'&&!k.fin&&!k.gulped&&k.ko<=0&&!k.air&&!k.sAir&&k.z<=0){
+      k.lostT=k.spin>0||fd<-.2?(k.lostT||0)+dt:fd>.5?0:(k.lostT||0);   // only clears once you're properly facing forwards again
+      k._rpT=(k._rpT||0)+dt;if(k._rpT>=.5){k._stuck=k.prog-(k._rp??k.prog)<1?(k._stuck||0)+k._rpT:0;k._rp=k.prog;k._rpT=0;}
+      if(k.lostT>=3||k._stuck>=3)rescueKart(k);}
+    else if(G.state!=='race'||k.fin){k.lostT=0;k._stuck=0;k._rp=k.prog;k._rpT=0;}else k._rp=k.prog;}   // (timers just pause while flying through the air or held by a carp)
   // laps
   const newLap=Math.floor(k.prog/TN)+1;
   if(newLap>k.lap&&!k.fin){k.lap=newLap;
     if(k.lap>G.laps){k.fin=true;k.ft=G.raceT;G.finishOrder.push(k);if(k.isP){if(G.players.every(p=>p.fin)){G.state='done';G.endT=4.5;}else G.waitT=G.waitT||30;jingle(k.place<=3?[523,659,784,1047,1319]:[392,523,659]);G.texts.push({x:k.x,y:k.y-60,s:'FINISH!',c:'#fff',life:2.5,max:2.5,big:1});}}
     else if(k.isP){const fl=k.lap===G.laps;if(fl)MUS.tempo=1.12;setBanner(k,{s:fl?'FINAL LAP!':'LAP '+k.lap,t:2});beep(fl?880:660,.2,'square',.07);if(fl)setTimeout(()=>beep(1100,.25,'square',.07),150)}}
 }
+function rescueKart(k){const T=G.T,ni=nearestIdx(T,k.x,k.y,k.idx,30),i=(ni+1)%TN,q=T.pts[i],lat=clamp(k._lat||0,-T.w*.28,T.w*.28);
+  let dl=i-k.idx;if(dl<-TN/2)dl+=TN;if(dl>TN/2)dl-=TN;k.prog+=dl;k.idx=i;
+  k.x=q.x+q.nx*lat;k.y=q.y+q.ny*lat;k.a=q.a;k.speed=180;k.vx=q.tx*180;k.vy=q.ty*180;k.spin=0;k.dizzy=0;k.inv=1.2;k.wrong=0;k.lostT=0;k._stuck=0;k._rp=k.prog;
+  k.z=k.vz=0;k.air=false;k.sAir=false;k._g0=undefined;k.gvp=undefined;k._sw0=undefined;k._svp=undefined;
+  if(G.vk&&k!==G.vk&&k.vs)k.vs.camYaw=k.a;else G.camYaw=k.a;   // camera straight back behind you
+  burst(k.x,k.y,'#fff',16);burst(k.x,k.y,'#7ef3ff',10,'star');G.texts.push({x:k.x,y:k.y-50,s:'BACK ON TRACK!',c:'#7ef3ff',life:1.3,max:1.3});if(k.isP)jingle([523,659,784]);}
 function aiControl(k,dt){
   const T=G.T,ai=k.ai;
   // rescue: if a rival makes no progress for a while, pop it back on the track facing forwards
@@ -1413,6 +1425,7 @@ function drawHUD(c){
     if(two&&!isTouch&&!go){const pad=padsFor(P).length;outlined(c,pad?'Your controller: stick to steer':P.pi?'◀ ▶ steer · ▼ brake · ENTER item':'A D steer · S brake · SPACE item',cx,cy+r*7.2,sm?16:22,P.pi?'#ff8ad8':'#ffe14d','center');}}
   if(G.banner){const a=Math.min(1,G.banner.t);c.globalAlpha=a;outlined(c,G.banner.s,W/2,H*.32,sm?48:72,G.banner.s==='FINAL LAP!'?'#ff5a4e':'#ffd23f','center');c.globalAlpha=1}
   if(P.wrong>1&&Math.floor(t*3)%2)outlined(c,'WRONG WAY!',W/2,H*.45,sm?40:60,'#ff5a4e','center');
+  {const lt=Math.max(P.lostT||0,P._stuck||0);if(lt>1.2&&lt<3&&G.state==='race'&&!P.fin)outlined(c,'Back on track in '+Math.ceil(3-lt)+'...',W/2,H*.45+(sm?40:56),sm?22:30,'#7ef3ff','center');}
   if(two&&!P.fin&&G.waitT>0&&G.state==='race')outlined(c,'Hurry! '+Math.ceil(G.waitT),W/2,H*.42,sm?40:56,'#ff8ad8','center');
   if(P.fin){const s=P.place;outlined(c,ORD(s)+' place!',W/2,H*.42,sm?56:88,s<=3?'#ffd23f':'#fff','center');
     if(two&&G.state!=='done')outlined(c,'Waiting for Player '+(2-P.pi)+'...',W/2,H*.42+(sm?44:64),sm?20:28,'#fff','center');

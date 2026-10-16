@@ -28,6 +28,7 @@ Useful ones:
 | `t112.py <track numbers>` | swells: how often racers hop, how high, and that the water never jumps between frames |
 | `t113.py` | screenshots of a swell ahead and a jetski hopping over one |
 | `t114.py` | the leaderboard on desktop, phones, tablets and both split-screen layouts |
+| `t115.py` | back on track after 3 seconds: wrong way, spun out, stuck, and no resets in normal racing |
 | `t111.py` | game controllers drive each player, and the two-player results screen |
 
 The rest are one-off checks from earlier development, kept for reference. The Swiftshader browser flags some of them use (`--use-angle=swiftshader`) let WebGL run on machines without a graphics card.

@@ -21,6 +21,7 @@ A bright, bouncy kids' racing game: eight frogs on jetskis race around **81 pond
 - A Mario Kart-style countdown with revving jet engines, exhaust flames, flying frogs and wheelie starts
 - Gentle swells drifting down every course: bob over them, or hit one fast and get a little air
 - A jet engine that never stops, with 3 gears, a turbo whistle, dump-valve "pssh" and AMG-style crackles and pops
+- Spun round or stuck? After 3 seconds you're popped back on the track facing the right way
 - A live leaderboard in the top right showing every racer from first to last
 - A speedometer and gear display, a minimap, lap counter and pumping race music (all made in code, so no copyrighted music)
 
