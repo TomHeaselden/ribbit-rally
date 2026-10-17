@@ -770,13 +770,14 @@ function sameLvl(k,i){const T=G.T;return !T.tower||i==null||Math.abs(kH(T,k)+k.z
 function nearestIdx(T,x,y,guess,span=24){let best=guess,bd=1e18;for(let k=-span;k<=span;k++){const i=(guess+k+TN)%TN;const p=T.pts[i];const d=(p.x-x)**2+(p.y-y)**2;if(d<bd){bd=d;best=i}}return best}
 function nearestIdxFull(T,x,y){let best=0,bd=1e18;for(let i=0;i<TN;i+=2){const p=T.pts[i];const d=(p.x-x)**2+(p.y-y)**2;if(d<bd){bd=d;best=i}}return nearestIdx(T,x,y,best,3)}
 
-function newRace(){
-  const T=getTrack(opts.track);const two=opts.players===2;
+function newRace(ns){   // ns: an online race (track, laps and the starting grid from the host)
+  const T=getTrack(ns?ns.track:opts.track);const two=!ns&&opts.players===2;
   if(two&&(opts.frog2==null||opts.frog2===opts.frog||!FROGS[opts.frog2]))opts.frog2=(opts.frog+1)%FROGS.length;
-  const humans=two?[opts.frog,opts.frog2]:[opts.frog];
-  const order=[];for(let i=0;i<8;i++)if(!humans.includes(i))order.push(i);
+  const humans=ns?[ns.grid.find(g=>g[0]===NET.id)[1]]:two?[opts.frog,opts.frog2]:[opts.frog];
+  let order=[];for(let i=0;i<8;i++)if(!humans.includes(i))order.push(i);
   order.sort(()=>Math.random()-.5);
   order.splice(4,0,...humans); // player starts in slot 5 (two players start side by side)
+  if(ns)order=ns.grid.map(g=>g[1]);
   const karts=order.map((fi,slot)=>{
     const row=slot>>1,col=slot&1;const back=5+row*5+col*2;const ii=(TN-back)%TN;const p=T.pts[ii];const lat=(col?.24:-.24)*T.w;
     const f=FROGS[fi];
@@ -789,6 +790,9 @@ function newRace(){
   G={T,karts,swells:makeSwells(T),player:karts.find(k=>k.pi===0),players:humans.map(fi=>karts.find(k=>k.fi===fi)),proj:[],haz:[],birds:[],poos:[],puddles:[],birdT:8+Math.random()*4,parts:[],texts:[],fire:[],flyers:[],carp:makeCarp(T),revT:.5,popAt:0,flyT:.2,state:'count',t:0,cd:6.4,raceT:0,laps:opts.laps,cam:{x:0,y:0,z:1},finishOrder:[],endT:0,paused:false,shake:0};
   G.cam.x=G.player.x;G.cam.y=G.player.y;G.camYaw=G.player.a;G.camOrbit=Math.PI;
   if(GL3.ok){buildWorld3D(T);const sk=T.th.sky;GL3.cvs.style.background=`linear-gradient(180deg,${sk[0]} 0%,${sk[1]} 62%,${sk[1]} 100%)`;}
+  G.humans=G.players;
+  if(ns){G.net=1;G.laps=ns.laps;karts.forEach((k,slot)=>{const o=ns.grid[slot][0];k.slot=slot;k.owner=o||'bots';k.human=!!o;k.remote=o?o!==NET.id:!NET.host;});G.humans=karts.filter(k=>k.human);}
+  else karts.forEach((k,slot)=>{k.slot=slot;k.human=k.isP;});
   if(two){for(const p of G.players)p.vs={cam:{x:p.x,y:p.y,z:1},camYaw:p.a,camOrbit:Math.PI,shake:0,banner:null,eng:{n:null,rpm:.12,pan:p.pi?.4:-.4,vol:.8}};
     G.vk=G.players[0];G.cam=G.vk.vs.cam;ENG=G.vk.vs.eng;for(const p of G.players){useView(p);engineStart();}useView(G.players[0]);}
   else{ENG={n:null,rpm:.12};engineStart();}
@@ -838,6 +842,7 @@ const DMG={spin:25,fly:30,slip:15,dizzy:12,bump:35,poo:6};
 function damage(k,amt,why){ // health is switched off: hits still spin you or slow you down and make you flash, but there's no health bar or knock-outs
   if(k.fin||k.inv>0||k.star>0||amt<=0)return;k.hurt=.35;}
 function hitKart(k,kind='spin',dmg){
+  if(k.remote)return false;   // online: only the computer that owns a jetski decides what hits it
   if(k.fin||k.ko>0||k.inv>0)return false;
   if(k.star>0)return false;
   if(k.shield>0){k.shield=0;burst(k.x,k.y,'#7ef3ff',14);popText(k.x,k.y-30,'POP!','#7ef3ff');if(k.isP)beep(900,.1,'sine',.08,600);return false}
@@ -866,6 +871,7 @@ function useItem(k){
     case 'croak':{G.texts.push({x:k.x,y:k.y-40,s:'CROAK!',c:'#ffd23f',life:1.2,max:1.2,big:1});G.parts.push({ring:1,x:k.x,y:k.y,life:.8,max:.8});
       for(const o of G.karts){if(o===k)continue;if(o.place<k.place||(k.place===1&&Math.hypot(o.x-k.x,o.y-k.y)<700))hitKart(o,'dizzy');}break;}
   }
+  if(G.net===1&&!k.remote)netItem(k,it);
 }
 function burst(x,y,c,n,type){for(let i=0;i<n;i++){const a=Math.random()*TAU,s=80+Math.random()*220;G.parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:.6+Math.random()*.4,max:1,c,s:type==='star'?7:4+Math.random()*4,type})}}
 function popText(x,y,s,c){G.texts.push({x,y,s,c,life:.8,max:.8})}
@@ -881,19 +887,20 @@ function update(dt){
   if(G.cd>-1)G.cd-=dt;
   updateFX(dt);
   if(G.state==='race'||G.state==='done')G.raceT+=dt;
-  for(const k of G.karts)stepKart(k,dt);
+  for(const k of G.karts){if(k.remote)netStepRemote(k,dt);else stepKart(k,dt);}
+  if(G.net)netTick(dt);
   // kart collisions
   const K=G.karts;
   // rubbing is free: jetskis that touch just slide apart sideways (across the track), so nobody loses speed or gets blocked
   for(let i=0;i<K.length;i++)for(let j=i+1;j<K.length;j++){const a=K[i],b=K[j];if(T.tower&&Math.abs(kH(T,a)+a.z-kH(T,b)-b.z)>70)continue;const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy);if(d<38&&d>0){const push=(38-d)/2,nx=dx/d,ny=dy/d;
     const q=T.pts[a.idx],lat=dx*q.nx+dy*q.ny,sg=Math.abs(lat)>.5?Math.sign(lat):(i%2?1:-1);let sx=nx*.15+q.nx*sg*.85,sy=ny*.15+q.ny*sg*.85;const sl=Math.hypot(sx,sy)||1;sx/=sl;sy/=sl;
-    a.x-=sx*push;a.y-=sy*push;b.x+=sx*push;b.y+=sy*push;
+    if(!a.remote){a.x-=sx*push;a.y-=sy*push;}if(!b.remote){b.x+=sx*push;b.y+=sy*push;}
     if(a.star>0&&b.star<=0)hitKart(b,'spin',DMG.bump);else if(b.star>0&&a.star<=0)hitKart(a,'spin',DMG.bump);
     else if((a.isP||b.isP)&&G.t-(G.rubT||0)>.3){G.rubT=G.t;beep(170,.04,'square',.025)}}}
   updateTongues(dt);
   // obstacles
   for(const bm of T.bumpers){bm.hit=Math.max(0,bm.hit-dt);bm.gone=Math.max(0,bm.gone-dt);const room=T.w/2-50;bm.lat=clamp(bm.lat0+Math.sin(G.t*bm.sw+bm.ph)*T.w*.28,-room,room);const p=T.pts[bm.i];bm.x=p.x+p.nx*bm.lat;bm.y=p.y+p.ny*bm.lat;}
-  for(const k of K){if(k.ko>0)continue;
+  for(const k of K){if(k.ko>0||k.remote)continue;
     const bump=(cx,cy,R,o)=>{const dx=k.x-cx,dy=k.y-cy,d=Math.hypot(dx,dy);if(d>=R||d<=0)return;const nx=dx/d,ny=dy/d;k.x=cx+nx*R;k.y=cy+ny*R;const vn=-(k.vx*nx+k.vy*ny);
       if(vn>0){k.vx+=1.8*vn*nx;k.vy+=1.8*vn*ny;k.speed*=clamp(1-vn/1000,.4,1);if(o)o.hit=.3;obstacleHit(k,vn);}};
     for(const bm of T.bumpers){if(bm.gone>0||k.spinHit>0||!sameLvl(k,bm.i))continue;if((k.x-bm.x)**2+(k.y-bm.y)**2<(bm.r+18)**2){bm.gone=4;k.spinHit=1.2;
@@ -907,9 +914,9 @@ function update(dt){
         G.texts.push({x:k.x,y:k.y-30,s:['SPLOOSH!','DRENCHED!','SPLASH!'][Math.random()*3|0],c:'#7ef3ff',life:.9,max:.9});burst(k.x,k.y,'#c9f3ff',14);
         if(k.isP){frogOof(.75);shk(k,.45)}else{const d2=pDist(k.x,k.y);if(d2<500)frogOof(.6,.5*(1-d2/500))}}}}
   // item boxes
-  for(const bx of T.boxes){if(bx.t>0){bx.t-=dt;continue}for(const k of K){if(k.ko>0||!sameLvl(k,bx.i))continue;if((k.x-bx.x)**2+(k.y-bx.y)**2<34*34){bx.t=2.5;burst(bx.x,bx.y,'#fff',8);if(!k.item&&k.roul<=0&&!(k.tongueT>0)){k.roul=1.1;k.rItem=pickItem(k.place,K.length);if(k.isP)beep(1000,.08,'square',.05)}break}}}
+  for(const bx of T.boxes){if(bx.t>0){bx.t-=dt;continue}for(const k of K){if(k.ko>0||!sameLvl(k,bx.i))continue;if((k.x-bx.x)**2+(k.y-bx.y)**2<34*34){bx.t=2.5;burst(bx.x,bx.y,'#fff',8);if(!k.remote&&!k.item&&k.roul<=0&&!(k.tongueT>0)){k.roul=1.1;k.rItem=pickItem(k.place,K.length);if(k.isP)beep(1000,.08,'square',.05)}break}}}
   // boost pads
-  for(const pd of T.pads){for(const k of K){const ca=Math.cos(pd.a),sa=Math.sin(pd.a);const dx=k.x-pd.x,dy=k.y-pd.y;const along=dx*ca+dy*sa,side=-dx*sa+dy*ca;if(Math.abs(along)<50&&Math.abs(side)<36&&sameLvl(k,pd.i)){if(k.boost<.9&&k.isP)beep(300,.3,'sawtooth',.05,400);k.boost=Math.max(k.boost,1.0);}}}
+  for(const pd of T.pads){for(const k of K){if(k.remote)continue;const ca=Math.cos(pd.a),sa=Math.sin(pd.a);const dx=k.x-pd.x,dy=k.y-pd.y;const along=dx*ca+dy*sa,side=-dx*sa+dy*ca;if(Math.abs(along)<50&&Math.abs(side)<36&&sameLvl(k,pd.i)){if(k.boost<.9&&k.isP)beep(300,.3,'sawtooth',.05,400);k.boost=Math.max(k.boost,1.0);}}}
   // birds fly over and drop poo; it lands as a skiddy puddle
   if(G.state!=='count'){G.birdT-=dt;if(G.birdT<=0){const lv=T.lvl||1;G.birdT=[14,11,9,8][lv-1]+Math.random()*[8,6,5,4][lv-1];if(G.puddles.length<4)spawnBird();}}
   for(let i=G.birds.length-1;i>=0;i--){const b=G.birds[i];b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;
@@ -920,7 +927,7 @@ function update(dt){
     if(p.h<=0){G.poos.splice(i,1);G.puddles.push({x:p.x,y:p.y,i:p.i,lat:p.lat,r:24+Math.random()*8,life:12,grow:0,rot:Math.random()*TAU,v:Math.random()*4|0});burst(p.x,p.y,'#f4f4ee',6);burst(p.x,p.y,'#8a8f74',3);
       const dp=pDist(p.x,p.y);if(dp<700)splatSound(1-dp/700);}}
   for(let i=G.puddles.length-1;i>=0;i--){const pd=G.puddles[i];pd.life-=dt;pd.grow=Math.min(1,pd.grow+dt*6);if(pd.life<=0){G.puddles.splice(i,1);continue}
-    for(const k of K){if(k.ko>0||k.slipCD>0||k.fin||!sameLvl(k,pd.i))continue;const R=pd.r*pd.grow+10;if((k.x-pd.x)**2+(k.y-pd.y)**2<R*R){k.slipCD=1.6;
+    for(const k of K){if(k.remote||k.ko>0||k.slipCD>0||k.fin||!sameLvl(k,pd.i))continue;const R=pd.r*pd.grow+10;if((k.x-pd.x)**2+(k.y-pd.y)**2<R*R){k.slipCD=1.6;
       if(hitKart(k,'poo')){G.texts.push({x:k.x,y:k.y-30,s:['EWW!','SKID!','SPLAT!','YUCK!'][Math.random()*4|0],c:'#f4f4ee',life:.9,max:.9});burst(k.x,k.y,'#ffffff',8);
         if(k.isP)skidSound(1);else{const dp=pDist(k.x,k.y);if(dp<600)skidSound(.5*(1-dp/600))}}}}}
   // hazards
@@ -990,7 +997,7 @@ function updateCarp(dt){const T=G.T;
     else if(c.state==='surface'){c.rise=Math.min(1,c.rise+dt*3.5);c.mouth=c.held?Math.max(.15,c.mouth-dt*6):Math.min(1,c.mouth+dt*5);if(c.t<=0&&!c.held){c.state='swim';c.t=3.5+Math.random()*4;splashAt(c.x,c.y,14,1);}}
     // gulp!
     const hx=c.x+Math.cos(c.a)*108,hy=c.y+Math.sin(c.a)*108;
-    if(c.state==='surface'&&c.mouth>.6&&!c.held&&G.state!=='count'){for(const k of G.karts){if(k.fin||k.ko>0||k.gulped||k.z>15||k.spitCD>0||(G.T.tower&&kH(G.T,k)>30))continue;if((k.x-hx)**2+(k.y-hy)**2>108*108)continue;
+    if(c.state==='surface'&&c.mouth>.6&&!c.held&&G.state!=='count'){for(const k of G.karts){if(k.remote||k.fin||k.ko>0||k.gulped||k.z>15||k.spitCD>0||(G.T.tower&&kH(G.T,k)>30))continue;if((k.x-hx)**2+(k.y-hy)**2>108*108)continue;
         if(k.star>0){continue}
         if(k.shield>0){k.shield=0;burst(k.x,k.y,'#7ef3ff',14);popText(k.x,k.y-30,'POP!','#7ef3ff');c.state='swim';c.t=3;c.cool=2;splashAt(hx,hy,10,1);break}
         c.held=k;c.holdT=.95;k.gulped=c;k.speed=k.vx=k.vy=0;k.boost=0;G.texts.push({x:hx,y:hy-20,s:'GULP!',c:'#ff8a1f',life:1,max:1,big:1});splashAt(hx,hy,16,1.2);
@@ -1020,7 +1027,7 @@ function tongueTarget(k){let best=null,bd=1e9;const ca=Math.cos(k.a),sa=Math.sin
   for(const o of G.karts){if(o===k||o.fin||o.ko>0||o.gulped||(G.T.tower&&Math.abs(kH(G.T,o)+o.z-kH(G.T,k)-k.z)>150))continue;const dx=o.x-k.x,dy=o.y-k.y,d=Math.hypot(dx,dy);if(d<40||d>720)continue;
     const fw=(dx*ca+dy*sa)/d;if(fw<.8)continue;if(Math.abs(o.z-k.z)>120)continue;if(d<bd){bd=d;best=o}}return best}
 function fireTongue(k){if(k.tongueCD>0||k.tng||k.spin>0||k.gulped||k.ko>0)return;const tgt=tongueTarget(k);
-  const d=tgt?Math.hypot(tgt.x-k.x,tgt.y-k.y):520;k.tng={tgt,t:0,out:Math.max(.12,d/2000),phase:'out',hit:false};k.tongueCD=1;
+  const d=tgt?Math.hypot(tgt.x-k.x,tgt.y-k.y):520;k.tng={tgt,t:0,out:Math.max(.12,d/2000),phase:'out',hit:false};k.tongueCD=1;if(G.net===1&&!k.remote)netTongue(k,tgt);
   const dp=pDist(k.x,k.y);if(k.isP)thwipSound(1);else if(dp<800)thwipSound(.5*(1-dp/800));}
 function updateTongues(dt){
   for(const k of G.karts){if(k.tongueT>0){k.tongueT-=dt;if(k.tongueT<=0&&k.isP)G.texts.push({x:k.x,y:k.y-50,s:'Tongue tired!',c:'#ffd0e0',life:.9,max:.9});}
@@ -1069,7 +1076,7 @@ function stepKart(k,dt){
   const q0=T.pts[k.idx];const lat=(k.x-q0.x)*q0.nx+(k.y-q0.y)*q0.ny;
   const off=false;
   let maxS=k.maxS;
-  if(!k.isP&&!k.fin){const d=[.8,.9,1][opts.diff]*[1,1.03,1.06,1.08][(T.lvl||1)-1];const gap=(Math.max(...G.players.map(p=>p.prog))-k.prog)/TN;maxS*=d*k.ai.skill*clamp(1+gap*.35,.86,1.14);}
+  if(!k.isP&&!k.fin){const d=[.8,.9,1][opts.diff]*[1,1.03,1.06,1.08][(T.lvl||1)-1];const gap=(Math.max(...(G.humans||G.players).map(p=>p.prog))-k.prog)/TN;maxS*=d*k.ai.skill*clamp(1+gap*.35,.86,1.14);}
   if(k.isP&&opts.diff===0)maxS*=1.03;
   if(off&&k.star<=0)maxS*=.48;
   if(k.boost>0)maxS*=1.5;if(k.star>0)maxS*=1.3;if(k.dizzy>0)maxS*=.6;
@@ -1134,7 +1141,7 @@ function stepKart(k,dt){
   // laps
   const newLap=Math.floor(k.prog/TN)+1;
   if(newLap>k.lap&&!k.fin){k.lap=newLap;
-    if(k.lap>G.laps){k.fin=true;k.ft=G.raceT;G.finishOrder.push(k);if(k.isP){if(G.players.every(p=>p.fin)){G.state='done';G.endT=4.5;}else G.waitT=G.waitT||30;jingle(k.place<=3?[523,659,784,1047,1319]:[392,523,659]);G.texts.push({x:k.x,y:k.y-60,s:'FINISH!',c:'#fff',life:2.5,max:2.5,big:1});}}
+    if(k.lap>G.laps){k.fin=true;k.ft=G.raceT;G.finishOrder.push(k);if(k.isP){if((G.humans||G.players).every(p=>p.fin||p.left)){G.state='done';G.endT=4.5;}else G.waitT=G.waitT||30;jingle(k.place<=3?[523,659,784,1047,1319]:[392,523,659]);G.texts.push({x:k.x,y:k.y-60,s:'FINISH!',c:'#fff',life:2.5,max:2.5,big:1});}}
     else if(k.isP){const fl=k.lap===G.laps;if(fl)MUS.tempo=1.12;setBanner(k,{s:fl?'FINAL LAP!':'LAP '+k.lap,t:2});beep(fl?880:660,.2,'square',.07);if(fl)setTimeout(()=>beep(1100,.25,'square',.07),150)}}
 }
 function rescueKart(k){const T=G.T,ni=nearestIdx(T,k.x,k.y,k.idx,30),i=(ni+1)%TN,q=T.pts[i],lat=clamp(k._lat||0,-T.w*.28,T.w*.28);
@@ -1317,6 +1324,7 @@ function drawLeaderboard(c,x,y,w,rh,P,two){const K=G.karts,n=K.length,pad=4,h=n*
   for(const k of [...K].sort((a,b)=>(a===P)-(b===P))){const ry=y+pad+((k.lbY==null?k.place:k.lbY)-1)*rh,me=k===P,hum=k.isP&&two,cy=ry+(rh-3)/2;
     const hi=me||hum;c.fillStyle=hi?(two&&k.pi===1?'rgba(255,95,162,.95)':'rgba(255,225,77,.95)'):'rgba(255,255,255,.13)';rr(c,x,ry,w,rh-3,(rh-3)/2);c.fill();
     if(me){c.strokeStyle='#fff';c.lineWidth=2;c.stroke();}
+    if(G.net&&k.human&&!me){c.fillStyle='rgba(92,240,122,.5)';rr(c,x,ry,w,rh-3,(rh-3)/2);c.fill();}   // other online players
     // place
     const pc=k.place===1?'#ffd23f':k.place===2?'#e6ecf5':k.place===3?'#ff9d5c':'#ffffff';
     c.font=fs+'px '+FONT;c.textAlign='center';c.lineWidth=3;c.strokeStyle='#3b1d8f';if(!hi)c.strokeText(String(k.place),x+fs*.75,cy+1);c.fillStyle=hi?'#3b1d8f':pc;c.fillText(String(k.place),x+fs*.75,cy+1);
@@ -1438,15 +1446,19 @@ function drawHUD(c){
 let last=performance.now();
 function loop(now){
   const dt=Math.min(1/30,(now-last)/1000);last=now;pollPads();
-  if(G&&!G.paused&&!G.over){update(dt);}
+  if(G&&!G.paused&&!G.over){
+    // online races keep to real time even on a slow device (so its jetski isn't slower than everyone else's)
+    if(G.net){const real=Math.min(.12,(now-(G._lastNow||now))/1000)||dt,n=Math.min(4,Math.max(1,Math.ceil(real*30-.01)));for(let i=0;i<n;i++)update(real/n);}
+    else update(dt);}
+  if(G)G._lastNow=now;
   if(G&&!G.over)render();
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
-document.addEventListener('visibilitychange',()=>{if(document.hidden&&G&&!G.over&&!G.paused&&G.state!=='done')togglePause()});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&G&&!G.net&&!G.over&&!G.paused&&G.state!=='done')togglePause()});
 
 // ================= screens =================
-const screens=['sTitle','sFrog','sTrack','sPause','sResult'];
+const screens=['sTitle','sFrog','sTrack','sPause','sResult','sOnline','sLobby'];
 function show(id){if(id==='sFrog')setTimeout(faceLoop,0);screens.forEach(s=>$('#'+s).hidden=s!==id);const racing=!id,two=opts.players===2;$('#hudBtns').hidden=!racing;$('#touch').hidden=!(racing&&isTouch);$('#touch2').hidden=!(racing&&isTouch&&two);$('#tG').hidden=$('#tG2').hidden=opts.autoGas;touchLayout();}
 // tablet split screen: each player gets their own set of buttons on their half of the screen
 function touchLayout(){const t1=$('#touch').style,t2=$('#touch2').style;if(opts.players!==2){t1.left=t1.right=t1.bottom='';return}
@@ -1454,23 +1466,27 @@ function touchLayout(){const t1=$('#touch').style,t2=$('#touch2').style;if(opts.
 addEventListener('resize',touchLayout);
 document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>{beep(500,.06);show(b.dataset.go)}));
 let PICK=1;   // which player is choosing a frog
-$('#bPlay').onclick=()=>{opts.players=1;saveOpts();PICK=1;frogPickUI();audio();playSong('menu');beep(660,.1);show('sFrog')};
-$('#bPlay2').onclick=()=>{opts.players=2;saveOpts();PICK=1;frogPickUI();audio();playSong('menu');beep(660,.1);beep(880,.1);show('sFrog')};
-$('#bToTracks').onclick=()=>{beep(660,.1);if(opts.players===2&&PICK===1){PICK=2;if(opts.frog2==null||opts.frog2===opts.frog)opts.frog2=(opts.frog+1)%FROGS.length;saveOpts();frogPickUI();scrollTo&&scrollTo(0,0);return}show('sTrack')};
+let ONLINE_FROM_FROG=false;   // picking a frog for an online race
+$('#bPlay').onclick=()=>{ONLINE_FROM_FROG=false;opts.players=1;saveOpts();PICK=1;frogPickUI();audio();playSong('menu');beep(660,.1);show('sFrog')};
+$('#bPlay2').onclick=()=>{ONLINE_FROM_FROG=false;opts.players=2;saveOpts();PICK=1;frogPickUI();audio();playSong('menu');beep(660,.1);beep(880,.1);show('sFrog')};
+$('#bToTracks').onclick=()=>{beep(660,.1);if(ONLINE_FROM_FROG){onlineMenu();return}if(opts.players===2&&PICK===1){PICK=2;if(opts.frog2==null||opts.frog2===opts.frog)opts.frog2=(opts.frog+1)%FROGS.length;saveOpts();frogPickUI();scrollTo&&scrollTo(0,0);return}show('sTrack')};
 $('#bFrogBack').onclick=()=>{beep(500,.06);if(opts.players===2&&PICK===2){PICK=1;frogPickUI();return}show('sTitle')};
 function frogPickUI(){const two=opts.players===2;$('#frogTitle').textContent=two?`Player ${PICK}: pick your frog`:'Pick your frog';
-  $('#bToTracks').textContent=two&&PICK===1?'Next: Player 2 picks':'Next: pick a track';document.body.classList.toggle('two',two);
+  $('#bToTracks').textContent=ONLINE_FROM_FROG?'Next: race online':two&&PICK===1?'Next: Player 2 picks':'Next: pick a track';document.body.classList.toggle('two',two);
   frogGrid.querySelectorAll('.card').forEach((x,j)=>{x.classList.toggle('sel',j===opts.frog);x.classList.toggle('sel2',two&&j===opts.frog2&&j!==opts.frog);x.classList.toggle('taken',two&&PICK===2&&j===opts.frog);
     let pb=x.querySelector('.pb');const lab=two?(j===opts.frog?'P1':j===opts.frog2?'P2':''):'';
     if(lab){if(!pb){pb=document.createElement('span');pb.className='pb';x.append(pb)}pb.textContent=lab;pb.dataset.p=lab}else if(pb)pb.remove();});}
 function startRace(){audio();stopSong();if(document.activeElement)document.activeElement.blur();if(G)G.over=true;engineStopAll();show(null);newRace();}
-function togglePause(){if(!G||G.over||G.state==='done')return;G.paused=!G.paused;setDuck(G.paused?.35:1);if(G.paused){engineMuteAll();show('sPause');$('#hudBtns').hidden=true}else show(null)}
+function togglePause(){if(!G||G.over||G.state==='done')return;
+  $('#bRestart').hidden=!!G.net;$('#bQuit').textContent=G.net?'Leave the online race':'Pick another track';$('#pauseTitle').textContent=G.net?'Menu (the race keeps going!)':'Paused';
+  if(G.net){G.menu=!G.menu;if(G.menu){show('sPause');$('#hudBtns').hidden=true}else show(null);return}   // online: the menu opens but the race carries on
+G.paused=!G.paused;setDuck(G.paused?.35:1);if(G.paused){engineMuteAll();show('sPause');$('#hudBtns').hidden=true}else show(null)}
 $('#bPause').onclick=togglePause;$('#bResume').onclick=togglePause;
 $('#bRestart').onclick=()=>{startRace()};
-$('#bQuit').onclick=()=>{G.over=true;engineStopAll();setDuck(1);playSong('menu');show('sTrack')};
-$('#bAgain').onclick=startRace;
+$('#bQuit').onclick=()=>{G.over=true;engineStopAll();setDuck(1);playSong('menu');if(G.net){netLeave();onlineMenu();return}show('sTrack')};
+$('#bAgain').onclick=()=>{if(G&&G.net){NET.toldFrog=0;$('#lobMsg2').textContent='';NET.quick?onlineStart('quick'):onlineStart(NET.wasHost?'make':'join',NET.code);return}startRace()};
 $('#bNext').onclick=()=>{opts.track=(opts.track+1)%TRACKS.length;opts.level=TRACKS[opts.track].lvl;saveOpts();renderTrackSel();startRace()};
-$('#bMenu').onclick=()=>{playSong('menu');show('sTrack')};
+$('#bMenu').onclick=()=>{playSong('menu');if(G&&G.net){netLeave();onlineMenu();return}show('sTrack')};
 function seg(id,key,conv=Number){const el=$(id);el.querySelectorAll('button').forEach(b=>{const v=conv(b.dataset.v);b.classList.toggle('on',v===(key==='sound'?sound:opts[key]));b.onclick=()=>{if(key==='sound'){sound=v;if(v)audio()}else if(key==='music'){setMusic(v);return}else opts[key]=v;saveOpts();el.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));beep(520,.05)}})}
 seg('#oLaps','laps');seg('#oDiff','diff');seg('#oGas','autoGas',v=>v==='1');seg('#oSnd','sound',v=>v==='1');seg('#oRev','revStyle',v=>v);document.querySelectorAll('#oRev button').forEach(b=>b.addEventListener('click',()=>{opts.revPicked=true;saveOpts();setTimeout(previewRev,60)}));seg('#oMus','music',v=>v==='1');
 function setMusic(v){opts.music=v;MUS.on=v;saveOpts();audio();if(v){if(G&&!G.over){if(G.state!=='count')playSong('race')}else playSong('menu')}musLevel();
@@ -1554,16 +1570,20 @@ function showResults(){
   const avg=G.raceT/Math.max(1,...K.map(k=>k.prog));
   rest.forEach(k=>{k.ft=G.raceT+Math.max(1,(G.laps*TN-k.prog))*avg*1.05});
   const order=[...fin,...rest];const two=G.players.length>1,pl=G.players.map(p=>order.indexOf(p)+1),me=Math.min(...pl);
-  const prev=done[opts.track];if(!prev||me<prev){done[opts.track]=me;store('rr-best',JSON.stringify(done));renderTrackSel();}
+  const trk=G.T.idx;if(!G.net){const prev=done[trk];if(!prev||me<prev){done[trk]=me;store('rr-best',JSON.stringify(done));renderTrackSel();}}
   if(two){const w=pl[0]<pl[1]?0:1;$('#rTitle').textContent=me===1?`Player ${w+1} wins!`:`Player ${w+1} beat Player ${2-w}!`;
     $('#rSub').textContent=`${TRACKS[opts.track].n} · P1 ${G.players[0].f.name}: ${ORD(pl[0])} (${fmtT(G.players[0].ft)}) · P2 ${G.players[1].f.name}: ${ORD(pl[1])} (${fmtT(G.players[1].ft)})`;}
+  else if(G.net){const hs=order.filter(k=>k.human).length;$('#rTitle').textContent=me===1?'You won the online race!':me<=3?ORD(me)+' place online. Great racing!':ORD(me)+' place. Hop to it next time!';
+    $('#rSub').textContent=`Online · ${TRACKS[trk].n} · ${G.laps} laps · ${hs} player${hs>1?'s':''} and ${8-hs} computer frog${8-hs===1?'':'s'} · your time ${fmtT(G.player.ft)}`;}
   else{$('#rTitle').textContent=me===1?'You won!':me<=3?ORD(me)+' place. Great racing!':ORD(me)+' place. Hop to it next time!';
     $('#rSub').textContent=`Level ${TRACKS[opts.track].lvl} · ${TRACKS[opts.track].n} · ${G.laps} laps · your time ${fmtT(G.player.ft)}`;}
   const pod=$('#podium');pod.innerHTML='';
   [1,0,2].forEach(i=>{const k=order[i];const d=document.createElement('div');d.className='pod';d.append(frogCanvas(k.fi,110,-Math.PI/2));
     d.insertAdjacentHTML('beforeend',`<div class="display" style="font-size:1.2rem">${k.f.name}</div><div class="blk" style="height:${[110,80,60][i]}px;background:${['#ffe14d','#e6ecff','#ffab73'][i]}">${i+1}</div>`);pod.append(d)});
-  const ol=$('#standings');ol.innerHTML='';order.forEach((k,i)=>{const li=document.createElement('li');if(k.isP)li.className='me';li.innerHTML=`<span class="p">${ORD(i+1)}</span><span>${k.f.name}${k.isP?(two?` (P${k.pi+1})`:' (you)'):''}<small>${k.kos?` · knocked out ${k.kos}×`:''}</small></span><span>${fmtT(k.ft)}</span>`;ol.append(li)});
+  const ol=$('#standings');ol.innerHTML='';order.forEach((k,i)=>{const li=document.createElement('li');if(k.isP)li.className='me';li.innerHTML=`<span class="p">${ORD(i+1)}</span><span>${k.f.name}${k.isP?(two?` (P${k.pi+1})`:' (you)'):G.net&&k.human?' (online player)':G.net?' (computer)':''}<small>${k.kos?` · knocked out ${k.kos}×`:''}</small></span><span>${fmtT(k.ft)}</span>`;ol.append(li)});
   $('#bNext').textContent=`Next: ${TRACKS[(opts.track+1)%TRACKS.length].n}`;
+  $('#bNext').hidden=!!G.net;$('#bAgain').textContent=G.net?(NET.quick?'Find another race':'Race again'):'Race again';$('#bMenu').textContent=G.net?'Online menu':'All tracks';
+  if(G.net)netRaceOver();
   show('sResult');confetti(me<=3);
 }
 function confetti(on){const cc=$('#confetti'),c=cc.getContext('2d');cc.width=innerWidth;cc.height=innerHeight;if(!on){c.clearRect(0,0,cc.width,cc.height);return}

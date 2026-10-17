@@ -10,6 +10,8 @@ python tests/t55.py           # page loads with no errors (prints 0)
 python tests/t13.py 0 25 61   # simulate full races on tracks 0, 25 and 61
 ```
 
+The online tests start `mqtt-test-relay.js`, a tiny local MQTT relay (`node tests/mqtt-test-relay.js 9001`), and open the game with `?mqtt=ws://127.0.0.1:9001/mqtt` so several browser windows can race each other without the internet.
+
 Useful ones:
 
 | Script | What it checks |
@@ -29,6 +31,10 @@ Useful ones:
 | `t113.py` | screenshots of a swell ahead and a jetski hopping over one |
 | `t114.py` | the leaderboard on desktop, phones, tablets and both split-screen layouts |
 | `t115.py` | back on track after 3 seconds: wrong way, spun out, stuck, and no resets in normal racing |
+| `t117.py` | online Quick Race: two players find each other, race with 6 computer frogs, both see the same results |
+| `t118.py` | online private room: 3 players join with a code, items reach everyone, the room maker leaves mid-race and another player takes over the computer frogs |
+| `t119.py` | two Quick Races started at once merge into one; the race starts by itself after 20 s; no connection shows a friendly message |
+| `t120.py` | screenshots of the lobby and an online race in 3D |
 | `t111.py` | game controllers drive each player, and the two-player results screen |
 
 The rest are one-off checks from earlier development, kept for reference. The Swiftshader browser flags some of them use (`--use-angle=swiftshader`) let WebGL run on machines without a graphics card.

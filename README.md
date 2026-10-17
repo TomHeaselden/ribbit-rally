@@ -11,11 +11,14 @@ A bright, bouncy kids' racing game: eight frogs on jetskis race around **81 pond
 
 **Controls:** arrow keys or A / D to steer, ▼ / S to brake, Space to use an item, F11 for full screen. Phones and tablets get big on-screen buttons.
 
+**Online:** press **Online**, pick your frog, then **Quick Race** (race whoever's online) or **Make a room** (share the 4-letter code with friends, who press **Join**). Online races meet through a free public MQTT relay over a secure WebSocket (`broker.emqx.io`, with `broker.hivemq.com` and `test.mosquitto.org` as backups), so there's no server to run. They work in the browser version and the desktop apps.
+
 **Two players:** press **2 Players** on the title screen to race a friend on one split screen. Player 1 uses A / D to steer, S to brake and Space for items; Player 2 uses the arrow keys and Enter. Game controllers work too (one each), and on a tablet each player gets their own buttons.
 
 ## What's in the game
 
 - **2-player split screen** on one keyboard, two game controllers or a tablet
+- **Online races** for up to 8 players: Quick Race joins any open race, or make a room and share its 4-letter code with friends. Computer frogs fill any empty spots. No chat and no names, just frogs
 - **8 frogs**, each with their own stats, a hat or accessory, a voice line and a funny blink: Zippy, Lulu, Bonk, Pip, Mango, Douglas Moleseed, Fern and Rocket
 - **4 levels:** gentle Level 1, sharp-turning Level 2, hairpin-crazy Level 3, and Level 4's rolling waves, boost pads and S-bends (including *Doodle Dash* and *Tower Twister*, both drawn from sketches. Tower Twister has a corkscrew water-slide tower and a giant drop)
 - A Mario Kart-style countdown with revving jet engines, exhaust flames, flying frogs and wheelie starts
@@ -76,6 +79,7 @@ src/
     game/render3d.js   the custom WebGL 3D renderer (frogs, jetskis, pond, carp...)
     game/music.js      the music sequencer (all synthesised, no audio files)
     game/game.js       the game: physics, AI rivals, items, sounds, voices, HUD, menus
+    game/net.js        online races: a small MQTT client, matchmaking, room codes and race syncing
     public/icon.png    page icon
 build/
   icon.png             app icon (electron-builder makes the Windows/Mac/Linux versions from it)
@@ -85,4 +89,4 @@ tests/                 Playwright checks used while developing (see tests/README
 docs/                  screenshots and sound demos
 ```
 
-The game's four scripts are plain browser scripts that share one global scope. Instead of bundling them as modules, `electron.vite.config.mjs` inlines them, in order, into `index.html` at build time.
+The game's five scripts are plain browser scripts that share one global scope. Instead of bundling them as modules, `electron.vite.config.mjs` inlines them, in order, into `index.html` at build time.

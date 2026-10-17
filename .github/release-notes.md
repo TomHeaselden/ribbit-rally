@@ -4,6 +4,7 @@ Eight hoppy frogs on jetskis, 81 pond courses across 4 levels, power-ups, koi ca
 
 ### What's new
 
+- **Online races:** press **Online** to race other players over the internet. Quick Race joins any open race; Make a room gives you a 4-letter code for friends. Computer frogs fill any empty spots, and there's no chat, just frogs.
 - **2-player split screen:** press **2 Players** on the title screen to race a friend on one screen. Use one keyboard, two game controllers, or a tablet with a set of buttons for each player.
 - **Back on track:** spin out and end up facing the wrong way, or get stuck, and after 3 seconds you're popped back on the track facing the right way.
 - **Live leaderboard:** every racer from first to last in the top right corner, so you can see where everyone is.

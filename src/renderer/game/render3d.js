@@ -500,7 +500,7 @@ function overlay3D(c){
     if(k===G.player)continue;
     const sc=clamp(p.s*1.4,.45,1.3)*(k.isP?1.15:1);
     const by=p.y-6*sc,nm=k.isP?'P'+(k.pi+1)+' '+k.f.name:k.f.name;
-    c.font=`600 ${15*sc|0}px ${BFONT}`;const tw=c.measureText(nm).width+12*sc;c.fillStyle=k.isP?(k.pi?'rgba(255,95,162,.92)':'rgba(214,160,0,.92)'):'rgba(59,29,143,.7)';rr(c,p.x-tw/2,by-24*sc,tw,19*sc,9*sc);c.fill();c.fillStyle='#fff';c.fillText(nm,p.x,by-14.5*sc);
+    c.font=`600 ${15*sc|0}px ${BFONT}`;const tw=c.measureText(nm).width+12*sc;c.fillStyle=k.isP?(k.pi?'rgba(255,95,162,.92)':'rgba(214,160,0,.92)'):G.net&&k.human?'rgba(40,170,90,.92)':'rgba(59,29,143,.7)';rr(c,p.x-tw/2,by-24*sc,tw,19*sc,9*sc);c.fill();c.fillStyle='#fff';c.fillText(nm,p.x,by-14.5*sc);
   }
   // tongue lock-on
   {const P=G.player,o=P.lock;if(P.tongueT>0&&o){const q=proj3(o.x,kZ(T,o)+24,o.y);if(q){const R=clamp(q.s*55,22,70),sp=t*3;c.save();c.translate(q.x,q.y);c.rotate(sp);c.strokeStyle=P.tongueCD>0?'rgba(255,138,216,.5)':'#ff3d78';c.lineWidth=4;

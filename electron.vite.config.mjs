@@ -8,7 +8,7 @@ import { resolve } from 'path'
 
 const GAME_DIR = resolve(process.cwd(), 'src/renderer/game')
 // Load order matters: tracks -> 3D renderer -> music -> game logic
-const GAME_SCRIPTS = ['tracks.js', 'render3d.js', 'music.js', 'game.js']
+const GAME_SCRIPTS = ['tracks.js', 'render3d.js', 'music.js', 'game.js', 'net.js']
 
 // The game is written as plain browser scripts that share one global scope (they call each
 // other's functions directly), so rather than bundling them as ES modules we inline them,
